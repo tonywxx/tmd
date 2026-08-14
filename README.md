@@ -375,4 +375,4 @@ tmd/
 
 ## License
 
-[MIT](./LICENSE)
+[Apache License 2.0](./LICENSE)
