@@ -45,15 +45,18 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       # Import the Apple Developer ID certificate (if provided) so the build
-      # is codesigned and notarized. Skip harmlessly when secrets are absent
-      # (the app then builds ad-hoc; the updater still works but Gatekeeper
-      # may warn on first launch).
+      # is codesigned and notarized. Skipped harmlessly when the secret is
+      # absent (the app then builds ad-hoc; the updater still works but
+      # Gatekeeper may warn on first launch).
       - name: Import Apple signing certificate
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "No Apple signing certificate provided; skipping import."
+            exit 0
+          fi
           echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/cert.p12
           security create-keychain -p "" build.keychain
           security import /tmp/cert.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
