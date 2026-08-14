@@ -142,3 +142,38 @@ jobs:
           releaseDraft: false
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           args: --target aarch64-apple-darwin
+
+      # tauri-action (through v0.6.2) does not reliably collect and upload the
+      # macOS *.app.tar.gz.sig artifact, so it never generates latest.json and
+      # the updater endpoint 404s ("Couldn't reach the update server"). We build
+      # and upload latest.json ourselves from the bundler-produced signature so
+      # the auto-updater works regardless of the action's artifact handling.
+      - name: Generate & upload latest.json (updater manifest)
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: |
+          export SIG_FILE="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/tmd.app.tar.gz.sig"
+          if [ ! -f "$SIG_FILE" ]; then
+            echo "::error::Updater signature $SIG_FILE not found; cannot build latest.json"
+            exit 1
+          fi
+          node -e '
+            const fs = require("fs");
+            const sig = fs.readFileSync(process.env.SIG_FILE, "utf8").trim();
+            const tag = process.env.RELEASE_TAG;
+            const conf = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+            const version = conf.version;
+            const repo = process.env.GITHUB_REPOSITORY;
+            const url = `https://github.com/${repo}/releases/download/${tag}/tmd_aarch64.app.tar.gz`;
+            const json = {
+              version,
+              notes: "",
+              pub_date: new Date().toISOString(),
+              platforms: { "darwin-aarch64": { signature: sig, url } },
+            };
+            fs.writeFileSync("latest.json", JSON.stringify(json, null, 2) + "\n");
+            console.log("Wrote latest.json for version", version);
+          '
+          gh release upload "$RELEASE_TAG" "$SIG_FILE" latest.json --clobber
