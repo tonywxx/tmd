@@ -73,6 +73,8 @@
     "allow-focus-bring-to-front",
     "allow-update-global-hotkey-cmd",
     "allow-print-window",
-    "allow-log-frontend-error"
+    "allow-log-frontend-error",
+    "allow-check-update-cmd",
+    "allow-install-update-cmd"
   ]
 }

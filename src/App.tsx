@@ -20,6 +20,7 @@ import { api } from "./lib/bridge";
 import { openFileByPath } from "./lib/fileops";
 import { executeCommand } from "./lib/commands";
 import { registerAppCommands } from "./lib/appCommands";
+import { checkForUpdates } from "./lib/updater";
 import { dirname } from "./lib/pathutil";
 import type { AccentColor } from "./lib/types";
 
@@ -81,6 +82,21 @@ export default function App() {
       } catch (e) {
         console.error("Failed to load settings", e);
       }
+      // Silent background update check (auto-update from GitHub). If a newer
+      // release exists, surface the Update dialog; failures are ignored.
+      setTimeout(() => {
+        void checkForUpdates()
+          .then((u) => {
+            if (u) {
+              useStore.getState().setUpdateInfo({
+                version: u.version,
+                notes: u.notes ?? "",
+                body: u.body ?? "",
+              });
+            }
+          })
+          .catch(() => {});
+      }, 4000);
       await restoreSession();
       // First-launch onboarding: generate + open the markdown help guide once.
       if (!localStorage.getItem("tmd_help_auto_opened")) {

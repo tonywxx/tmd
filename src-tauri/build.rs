@@ -42,6 +42,8 @@ fn main() {
                 "update_global_hotkey_cmd",
                 "print_window",
                 "log_frontend_error",
+                "check_update_cmd",
+                "install_update_cmd",
             ]),
         ),
     )

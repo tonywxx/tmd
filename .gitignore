@@ -27,3 +27,8 @@ graphify-out/
 .playwright-mcp/
 tony/
 .workbuddy
+
+# Tauri updater signing keys — NEVER commit the private key
+tauri.key
+tauri.key.pub
+*.key

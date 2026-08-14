@@ -1,0 +1,93 @@
+name: Release
+
+# Builds the Tauri app and publishes a GitHub release. Stable tags
+# (v1.2.3) publish to the "latest" release; pre-release / beta tags
+# (v1.2.3-beta.1) publish to a rolling "beta" release so the app's
+# beta-updates channel can find them.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.2.3 or v1.2.3-beta.1)"
+        required: true
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      # Import the Apple Developer ID certificate (if provided) so the build
+      # is codesigned and notarized. Skip harmlessly when secrets are absent
+      # (the app then builds ad-hoc; the updater still works but Gatekeeper
+      # may warn on first launch).
+      - name: Import Apple signing certificate
+        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "" build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -d user -s build.keychain login.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      # For beta tags, reset the rolling "beta" release so each beta push
+      # overwrites the previous one (the app's beta channel always points at
+      # releases/beta/download/latest.json).
+      - name: Reset rolling beta release
+        if: contains(env.RELEASE_TAG, '-')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete beta --yes || true
+          git push origin :refs/tags/beta || true
+
+      - name: Build & release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: src-tauri
+          tagName: ${{ contains(env.RELEASE_TAG, '-') && 'beta' || env.RELEASE_TAG }}
+          releaseName: ${{ contains(env.RELEASE_TAG, '-') && 'beta' || format('tmd {0}', env.RELEASE_TAG) }}
+          releaseBody: "Download the asset below. The app also auto-updates from GitHub."
+          releaseDraft: ${{ !contains(env.RELEASE_TAG, '-') }}
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          args: --target aarch64-apple-darwin

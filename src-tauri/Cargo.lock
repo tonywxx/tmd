@@ -4385,6 +4385,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "trash",
+ "url",
 ]
 
 [[package]]

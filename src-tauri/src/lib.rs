@@ -3,6 +3,7 @@ mod git;
 mod security;
 mod store;
 mod types;
+mod updater;
 mod watcher;
 
 use commands::AppState;
@@ -441,6 +442,8 @@ pub fn run() {
             commands::update_global_hotkey_cmd,
             commands::print_window,
             commands::log_frontend_error,
+            updater::check_update_cmd,
+            updater::install_update_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

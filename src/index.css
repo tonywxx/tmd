@@ -735,6 +735,36 @@ body {
   margin-top: 12px;
 }
 
+.about-update {
+  margin: 14px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.about-update .update-available {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.about-update .update-progress,
+.update-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.about-update progress,
+.update-progress progress {
+  width: 220px;
+  accent-color: var(--accent);
+}
+.muted {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
 /* diff */
 .diff-modal {
   width: 760px;
