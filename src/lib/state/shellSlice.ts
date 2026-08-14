@@ -27,12 +27,18 @@ export const createShellSlice: StateCreator<AppState, [], [], ShellSlice> = (
   findInFolderOpen: false,
   diffData: null,
   updateInfo: null,
+  updateStatus: "idle",
+  updateProgress: { downloaded: 0, total: null },
+  updateArchivePath: null,
   setSettingsOpen: (v) => set({ settingsOpen: v }),
   setAboutOpen: (v) => set({ aboutOpen: v }),
   setOpenPathOpen: (v) => set({ openPathOpen: v }),
   setFindInFolderOpen: (v) => set({ findInFolderOpen: v }),
   setDiffData: (d) => set({ diffData: d }),
   setUpdateInfo: (u) => set({ updateInfo: u }),
+  setUpdateStatus: (s) => set({ updateStatus: s }),
+  setUpdateProgress: (p) => set({ updateProgress: p }),
+  setUpdateArchivePath: (p) => set({ updateArchivePath: p }),
 
   toasts: [],
   pushToast: (message, type = "info") =>

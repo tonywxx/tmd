@@ -19,6 +19,7 @@ import { openFileByPath } from "../lib/fileops";
 import { basename, dirname, join } from "../lib/pathutil";
 import { favEq, type Favorite, type FileEntry, type SortMode } from "../lib/types";
 import { formatRelativeTime } from "../lib/formatTime";
+import UpdateStatus from "./UpdateStatus";
 
 const SORT_LABELS: Record<SortMode, string> = {
   name: "Name",
@@ -373,6 +374,8 @@ export default function FileBrowser() {
           <div className="fb-empty">Open a folder to browse files.</div>
         )}
       </div>
+
+      <UpdateStatus />
 
       <div
         className="fb-resizer"

@@ -443,6 +443,7 @@ pub fn run() {
             commands::print_window,
             commands::log_frontend_error,
             updater::check_update_cmd,
+            updater::download_update_cmd,
             updater::install_update_cmd,
         ])
         .run(tauri::generate_context!())

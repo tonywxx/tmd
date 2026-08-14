@@ -14,6 +14,13 @@ export type UpdateInfo = {
   body: string;
 };
 
+/// Lifecycle of a background auto-update, surfaced in the sidebar status region.
+/// - `idle`: no update in flight (up to date, or not yet checked)
+/// - `downloading`: update found, downloading in the background
+/// - `ready`: download finished, waiting for the user to click "Restart to update"
+/// - `error`: download failed
+export type UpdateStatus = "idle" | "downloading" | "ready" | "error";
+
 // ---- Shell slice — App shell context ----
 // Windows, menus, tabs-as-UI, dialogs, session, settings, toasts
 // (see CONTEXT.md "App shell context").
@@ -35,12 +42,18 @@ export interface ShellSlice {
   findInFolderOpen: boolean;
   diffData: DiffData | null;
   updateInfo: UpdateInfo | null;
+  updateStatus: UpdateStatus;
+  updateProgress: { downloaded: number; total: number | null };
+  updateArchivePath: string | null;
   setSettingsOpen: (v: boolean) => void;
   setAboutOpen: (v: boolean) => void;
   setOpenPathOpen: (v: boolean) => void;
   setFindInFolderOpen: (v: boolean) => void;
   setDiffData: (d: DiffData | null) => void;
   setUpdateInfo: (u: UpdateInfo | null) => void;
+  setUpdateStatus: (s: UpdateStatus) => void;
+  setUpdateProgress: (p: { downloaded: number; total: number | null }) => void;
+  setUpdateArchivePath: (p: string | null) => void;
 
   toasts: ToastItem[];
   pushToast: (message: string, type?: ToastItem["type"]) => void;

@@ -328,6 +328,31 @@ body {
   background: var(--accent);
 }
 
+/* ---------- Sidebar update status ---------- */
+.sidebar-update {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+.sidebar-update-text {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+.sidebar-update progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.sidebar-update-btn {
+  width: 100%;
+  text-align: center;
+}
+
+
 /* ---------- Toolbar ---------- */
 .toolbar {
   display: flex;

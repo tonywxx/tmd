@@ -13,14 +13,13 @@ import AboutDialog from "./components/dialogs/AboutDialog";
 import DiffView from "./components/dialogs/DiffView";
 import FindInFolder from "./components/dialogs/FindInFolder";
 import OpenPathModal from "./components/dialogs/OpenPathModal";
-import UpdateDialog from "./components/dialogs/UpdateDialog";
 import Toasts from "./components/dialogs/Toasts";
 import { useStore } from "./lib/store";
 import { api } from "./lib/bridge";
 import { openFileByPath } from "./lib/fileops";
 import { executeCommand } from "./lib/commands";
 import { registerAppCommands } from "./lib/appCommands";
-import { checkForUpdates } from "./lib/updater";
+import { checkForUpdates, downloadUpdate } from "./lib/updater";
 import { dirname } from "./lib/pathutil";
 import type { AccentColor } from "./lib/types";
 
@@ -83,17 +82,34 @@ export default function App() {
         console.error("Failed to load settings", e);
       }
       // Silent background update check (auto-update from GitHub). If a newer
-      // release exists, surface the Update dialog; failures are ignored.
+      // release exists, start downloading it in the background; the sidebar
+      // status region shows progress and a "Restart to update" button when
+      // ready. Failures are ignored (surfaced via the About dialog on demand).
       setTimeout(() => {
         void checkForUpdates()
           .then((u) => {
-            if (u) {
-              useStore.getState().setUpdateInfo({
-                version: u.version,
-                notes: u.notes ?? "",
-                body: u.body ?? "",
+            if (!u) return;
+            const st = useStore.getState();
+            st.setUpdateInfo({
+              version: u.version,
+              notes: u.notes ?? "",
+              body: u.body ?? "",
+            });
+            st.setUpdateStatus("downloading");
+            st.setUpdateProgress({ downloaded: 0, total: null });
+            void downloadUpdate((d, t) =>
+              useStore.getState().setUpdateProgress({ downloaded: d, total: t }),
+            )
+              .then((path) => {
+                const s = useStore.getState();
+                s.setUpdateArchivePath(path);
+                s.setUpdateStatus("ready");
+              })
+              .catch(() => {
+                const s = useStore.getState();
+                s.setUpdateStatus("error");
+                s.pushToast("Failed to download update.", "error");
               });
-            }
           })
           .catch(() => {});
       }, 4000);
@@ -331,7 +347,6 @@ export default function App() {
       {useStore((s) => s.diffData) && <DiffView />}
       {useStore((s) => s.findInFolderOpen) && <FindInFolder />}
       {useStore((s) => s.openPathOpen) && <OpenPathModal />}
-      {useStore((s) => s.updateInfo) && <UpdateDialog />}
       <Toasts />
 
       {ctxMenu && (

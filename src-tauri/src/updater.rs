@@ -47,6 +47,22 @@ fn map_update(u: &Update) -> UpdateInfo {
     }
 }
 
+/// Select the pending update using the same channel rule as `check_update_cmd`:
+/// beta channel first when enabled, otherwise stable. Errors when no update is
+/// available on either channel.
+async fn pick_update(app: &AppHandle, beta: bool) -> Result<Update, String> {
+    if beta {
+        if let Ok(Some(u)) = build_updater(app, &[BETA_ENDPOINT])?.check().await {
+            return Ok(u);
+        }
+    }
+    build_updater(app, &[STABLE_ENDPOINT])?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "no update available".to_string())
+}
+
 /// Check GitHub for a newer release.
 ///
 /// Beta users first check the `beta` channel; if that endpoint is unreachable
@@ -72,24 +88,62 @@ pub async fn check_update_cmd(app: AppHandle) -> Result<Option<UpdateInfo>, Stri
     Ok(update.map(|u| map_update(&u)))
 }
 
-/// Download and install the pending update, emitting `update://progress`
-/// (`{ downloaded, total }`) events as bytes arrive, then relaunch the updated
-/// app in place. Uses the same channel-selection rule as `check_update_cmd`.
+/// Download the pending update to a temp file, emitting `update://progress`
+/// (`{ downloaded, total }`) events as bytes arrive. Returns the path to the
+/// downloaded archive on disk so the caller can install it later (e.g. when the
+/// user clicks "Restart to update" in the sidebar) without re-downloading.
 #[tauri::command]
-pub async fn install_update_cmd(app: AppHandle) -> Result<(), String> {
+pub async fn download_update_cmd(app: AppHandle) -> Result<String, String> {
     let beta = app.state::<AppState>().store.get_settings().beta_updates;
+    let update = pick_update(&app, beta).await?;
 
-    if beta {
-        if let Ok(Some(u)) = build_updater(&app, &[BETA_ENDPOINT])?.check().await {
-            return download_and_install(app, u).await;
+    let tmp = std::env::temp_dir().join(format!("tmd_update_{}.tar.gz", update.version));
+    let downloaded = Cell::new(0usize);
+    let bytes = update
+        .download(
+            {
+                let app = app.clone();
+                move |chunk, total| {
+                    let d = downloaded.get() + chunk;
+                    downloaded.set(d);
+                    let _ = app.emit(
+                        UPDATE_PROGRESS_EVENT,
+                        serde_json::json!({ "downloaded": d, "total": total }),
+                    );
+                }
+            },
+            || {},
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
+    Ok(tmp.to_string_lossy().to_string())
+}
+
+/// Install the pending update and relaunch.
+///
+/// `archive_path` optionally points at a pre-downloaded archive produced by
+/// `download_update_cmd` (the background auto-download path). When provided and
+/// readable, the update is installed directly from that file and no download
+/// happens. Otherwise the archive is downloaded and installed in one step
+/// (used by the manual "Check for Updates" flow in the About dialog).
+#[tauri::command]
+pub async fn install_update_cmd(
+    app: AppHandle,
+    archive_path: Option<String>,
+) -> Result<(), String> {
+    let beta = app.state::<AppState>().store.get_settings().beta_updates;
+    let update = pick_update(&app, beta).await?;
+
+    if let Some(path) = archive_path {
+        if let Ok(bytes) = std::fs::read(&path) {
+            update.install(&bytes).map_err(|e| e.to_string())?;
+            relaunch();
+            return Ok(());
         }
     }
 
-    let update = build_updater(&app, &[STABLE_ENDPOINT])?
-        .check()
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "no update available".to_string())?;
     download_and_install(app, update).await
 }
 
@@ -113,7 +167,12 @@ async fn download_and_install(app: AppHandle, update: Update) -> Result<(), Stri
         .await
         .map_err(|e| e.to_string())?;
 
-    // The new app bundle is now in place. Relaunch it and exit this process.
+    relaunch();
+    Ok(())
+}
+
+/// The new app bundle is now in place. Relaunch it and exit this process.
+fn relaunch() {
     if let Ok(exe) = std::env::current_exe() {
         let _ = std::process::Command::new(&exe).spawn();
     }
