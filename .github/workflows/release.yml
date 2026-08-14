@@ -89,7 +89,13 @@ jobs:
           gh release delete beta --yes || true
           git push origin :refs/tags/beta || true
 
-      - name: Build & release
+      # NOTE: GitHub Actions cannot conditionally *omit* an env key, only set
+      # it to empty. Tauri's bundler treats an empty APPLE_CERTIFICATE as
+      # "present" and tries to `security import` it (and fails). So we use two
+      # build steps: the ad-hoc one does NOT define any APPLE_* vars at all,
+      # which makes Tauri sign ad-hoc without touching the keychain.
+      - name: Build & release (codesigned)
+        if: steps.cert.outputs.has_cert == 'true'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,13 +103,32 @@ jobs:
           # downloaded updates. Independent of Apple codesign.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Apple codesign — only enabled when the cert imported successfully.
-          APPLE_CERTIFICATE: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_CERTIFICATE || '' }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
-          APPLE_SIGNING_IDENTITY: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
-          APPLE_ID: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_TEAM_ID || '' }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: src-tauri
+          tagName: ${{ contains(env.RELEASE_TAG, '-') && 'beta' || env.RELEASE_TAG }}
+          releaseName: ${{ contains(env.RELEASE_TAG, '-') && 'beta' || format('tmd {0}', env.RELEASE_TAG) }}
+          releaseBody: "Download the asset below. The app also auto-updates from GitHub."
+          releaseDraft: false
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          args: --target aarch64-apple-darwin
+
+      - name: Build & release (ad-hoc)
+        if: steps.cert.outputs.has_cert != 'true'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri updater signing — required for the auto-updater to verify
+          # downloaded updates. Independent of Apple codesign. The app itself
+          # is built ad-hoc (no Apple cert), so Gatekeeper may warn on first
+          # launch, but the updater still works.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: src-tauri
           tagName: ${{ contains(env.RELEASE_TAG, '-') && 'beta' || env.RELEASE_TAG }}
