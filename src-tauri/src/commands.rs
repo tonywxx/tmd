@@ -472,8 +472,8 @@ pub fn session_set(state: State<AppState>, window_id: String, session: Session) 
 // ---------- app info ----------
 
 #[tauri::command]
-pub fn app_version() -> String {
-    env!("CARGO_PKG_VERSION").to_string()
+pub fn app_version(app: AppHandle) -> String {
+    app.package_info().version.to_string()
 }
 
 #[tauri::command]

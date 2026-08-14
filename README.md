@@ -7,6 +7,20 @@
 
 > `tmd` is short for **TONy Markdown**.
 
+> ⚠️ **macOS: "tmd" is damaged and can't be opened — You should move it to the Trash.**
+> This is a Gatekeeper / quarantine block, **not** a corrupted file. The app is
+> ad-hoc signed (no Apple Developer ID / notarization), so when it arrives from
+> another machine it carries the `com.apple.quarantine` extended attribute and
+> macOS refuses to launch it. Fix it once with:
+>
+> ```bash
+> sudo xattr -rd com.apple.quarantine /Applications/tmd.app
+> ```
+>
+> Or, if you installed it elsewhere, run the same command with the real path
+> (e.g. `~/Downloads/tmd.app`). After this, double-clicking the app works as
+> normal. See [Troubleshooting](#troubleshooting) for alternatives.
+
 ---
 
 ![App UI](img/app-ui.png)
@@ -24,6 +38,7 @@
 - [Configuration](#configuration)
 - [Usage Examples](#usage-examples)
 - [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ---
@@ -370,6 +385,62 @@ tmd/
 ├── pnpm-workspace.yaml
 └── vite.config.ts
 ```
+
+---
+
+## Troubleshooting
+
+### "tmd" is damaged and can't be opened — You should move it to the Trash
+
+This is the most common macOS issue and is **not** a corrupted download. tmd is
+ad-hoc signed (built with `codesign --force --deep --sign -`, see
+`scripts/bundle.sh`) and is **not** notarized with an Apple Developer ID. When the
+`.app` is copied from another Mac or downloaded from the internet, macOS tags it
+with the `com.apple.quarantine` extended attribute, and Gatekeeper blocks the
+launch with the "damaged" dialog.
+
+**Easiest fix — strip the quarantine attribute:**
+
+```bash
+sudo xattr -rd com.apple.quarantine /Applications/tmd.app
+```
+
+(Replace the path if you installed tmd somewhere else, e.g. `~/Downloads/tmd.app`.)
+After running this once, double-clicking the app launches it normally.
+
+**Alternative fix — open once via the context menu:**
+
+1. In Finder, right-click (or Control-click) `tmd.app`.
+2. Choose **Open** from the menu.
+3. In the confirmation dialog, click **Open**.
+
+macOS remembers this approval and subsequent launches work normally. This path
+does not require Terminal or `sudo`.
+
+> **Why not just "Move to Trash"?** The dialog's suggestion is misleading for
+> ad-hoc-signed open-source apps. The binary is intact; only the quarantine flag
+> blocks it. Removing the flag (above) is the supported workaround and does not
+> weaken your Mac — the app still runs inside the sandbox defined by its Tauri
+> capabilities.
+
+### App won't start in `pnpm tauri dev` (CLI killed instantly)
+
+In some sandboxes the harness SIGKILLs the `tauri` CLI process tree (and its
+`cargo` child), so `pnpm tauri dev` / `pnpm tauri build` die with no error. The
+compiled binary itself runs fine when launched directly. Use the bundled script:
+
+```bash
+bash scripts/run.sh
+```
+
+This builds the frontend + backend and `exec`s the release binary directly,
+bypassing the Tauri CLI.
+
+### No native window / WebView in headless environments
+
+tmd needs a WindowServer to render its UI. On a headless CI machine `pnpm tauri
+dev` will build but show nothing. Run it on a desktop Mac (or any environment
+with a display) to see the window.
 
 ---
 
