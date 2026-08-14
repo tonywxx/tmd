@@ -143,22 +143,28 @@ jobs:
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           args: --target aarch64-apple-darwin
 
-      # tauri-action (through v0.6.2) does not reliably collect and upload the
-      # macOS *.app.tar.gz.sig artifact, so it never generates latest.json and
-      # the updater endpoint 404s ("Couldn't reach the update server"). We build
-      # and upload latest.json ourselves from the bundler-produced signature so
-      # the auto-updater works regardless of the action's artifact handling.
+      # tauri-action (through v0.6.2) does not reliably emit the macOS
+      # *.app.tar.gz.sig artifact, so it never generates latest.json and the
+      # updater endpoint 404s ("Couldn't reach the update server"). We sign the
+      # updater archive ourselves with the Tauri signing key and build/upload
+      # latest.json directly, so the auto-updater resolves and verifies updates
+      # regardless of the action's internal artifact handling.
       - name: Generate & upload latest.json (updater manifest)
         if: success()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          export SIG_FILE="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/tmd.app.tar.gz.sig"
-          if [ ! -f "$SIG_FILE" ]; then
-            echo "::error::Updater signature $SIG_FILE not found; cannot build latest.json"
+          TAR_GZ="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/tmd.app.tar.gz"
+          export SIG_FILE="${TAR_GZ}.sig"
+          if [ ! -f "$TAR_GZ" ]; then
+            echo "::error::Updater archive $TAR_GZ not found; cannot sign/update"
             exit 1
           fi
+          # Sign the updater archive so the auto-updater can verify the download.
+          pnpm tauri signer sign "$TAR_GZ"
           node -e '
             const fs = require("fs");
             const sig = fs.readFileSync(process.env.SIG_FILE, "utf8").trim();
