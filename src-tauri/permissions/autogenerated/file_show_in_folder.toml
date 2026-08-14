@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-file-show-in-folder"
+description = "Enables the file_show_in_folder command without any pre-configured scope."
+commands.allow = ["file_show_in_folder"]
+
+[[permission]]
+identifier = "deny-file-show-in-folder"
+description = "Denies the file_show_in_folder command without any pre-configured scope."
+commands.deny = ["file_show_in_folder"]

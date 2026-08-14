@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-unwatch-directory-cmd"
+description = "Enables the unwatch_directory_cmd command without any pre-configured scope."
+commands.allow = ["unwatch_directory_cmd"]
+
+[[permission]]
+identifier = "deny-unwatch-directory-cmd"
+description = "Denies the unwatch_directory_cmd command without any pre-configured scope."
+commands.deny = ["unwatch_directory_cmd"]

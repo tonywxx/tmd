@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-app-home-dir"
+description = "Enables the app_home_dir command without any pre-configured scope."
+commands.allow = ["app_home_dir"]
+
+[[permission]]
+identifier = "deny-app-home-dir"
+description = "Denies the app_home_dir command without any pre-configured scope."
+commands.deny = ["app_home_dir"]

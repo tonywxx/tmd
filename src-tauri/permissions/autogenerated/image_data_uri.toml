@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-image-data-uri"
+description = "Enables the image_data_uri command without any pre-configured scope."
+commands.allow = ["image_data_uri"]
+
+[[permission]]
+identifier = "deny-image-data-uri"
+description = "Denies the image_data_uri command without any pre-configured scope."
+commands.deny = ["image_data_uri"]

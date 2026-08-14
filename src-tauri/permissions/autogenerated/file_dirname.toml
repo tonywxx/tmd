@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-file-dirname"
+description = "Enables the file_dirname command without any pre-configured scope."
+commands.allow = ["file_dirname"]
+
+[[permission]]
+identifier = "deny-file-dirname"
+description = "Denies the file_dirname command without any pre-configured scope."
+commands.deny = ["file_dirname"]

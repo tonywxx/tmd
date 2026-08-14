@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-file-basename"
+description = "Enables the file_basename command without any pre-configured scope."
+commands.allow = ["file_basename"]
+
+[[permission]]
+identifier = "deny-file-basename"
+description = "Denies the file_basename command without any pre-configured scope."
+commands.deny = ["file_basename"]

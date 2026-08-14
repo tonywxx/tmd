@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-watch-file-cmd"
+description = "Enables the watch_file_cmd command without any pre-configured scope."
+commands.allow = ["watch_file_cmd"]
+
+[[permission]]
+identifier = "deny-watch-file-cmd"
+description = "Denies the watch_file_cmd command without any pre-configured scope."
+commands.deny = ["watch_file_cmd"]

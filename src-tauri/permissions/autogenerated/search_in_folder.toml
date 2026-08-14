@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-search-in-folder"
+description = "Enables the search_in_folder command without any pre-configured scope."
+commands.allow = ["search_in_folder"]
+
+[[permission]]
+identifier = "deny-search-in-folder"
+description = "Denies the search_in_folder command without any pre-configured scope."
+commands.deny = ["search_in_folder"]
