@@ -96,7 +96,12 @@ jobs:
       # which makes Tauri sign ad-hoc without touching the keychain.
       - name: Build & release (codesigned)
         if: steps.cert.outputs.has_cert == 'true'
-        uses: tauri-apps/tauri-action@v0
+        # Pinned to v0.6.2: the mutable @v0 major tag resolved to an older
+        # commit at build time that does NOT collect the macOS
+        # `*.app.tar.gz.sig` artifact, so tauri-action never generated
+        # latest.json and the updater endpoint 404'd. v0.6.2 reliably
+        # collects the .sig, uploads it, and builds the signed latest.json.
+        uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Tauri updater signing — required for the auto-updater to verify
@@ -120,7 +125,7 @@ jobs:
 
       - name: Build & release (ad-hoc)
         if: steps.cert.outputs.has_cert != 'true'
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Tauri updater signing — required for the auto-updater to verify
