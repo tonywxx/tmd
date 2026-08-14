@@ -4,6 +4,12 @@ name: Release
 # (v1.2.3) publish to the "latest" release; pre-release / beta tags
 # (v1.2.3-beta.1) publish to a rolling "beta" release so the app's
 # beta-updates channel can find them.
+#
+# The updater endpoints in tauri.conf.json point at:
+#   - https://github.com/tonywxx/tmd/releases/latest/download/latest.json   (stable)
+#   - https://github.com/tonywxx/tmd/releases/beta/download/latest.json      (beta)
+# For these to resolve, the releases MUST be published (not drafts) and the
+# stable one must not be a pre-release.
 on:
   push:
     tags:
@@ -28,9 +34,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: 11
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -47,27 +51,36 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       # Import the Apple Developer ID certificate (if provided) so the build
-      # is codesigned and notarized. Skipped harmlessly when the secret is
-      # absent (the app then builds ad-hoc; the updater still works but
-      # Gatekeeper may warn on first launch).
+      # is codesigned and notarized. If the import fails for any reason we
+      # fall back to an ad-hoc build so the release still gets created and the
+      # Tauri updater (which signs with TAURI_SIGNING_PRIVATE_KEY, independent
+      # of Apple codesign) keeps working.
       - name: Import Apple signing certificate
+        id: cert
+        continue-on-error: true
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
           if [ -z "$APPLE_CERTIFICATE" ]; then
-            echo "No Apple signing certificate provided; skipping import."
+            echo "No Apple signing certificate provided; will build ad-hoc."
+            echo "has_cert=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/cert.p12
-          security create-keychain -p "" build.keychain
-          security import /tmp/cert.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 24)
+          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import /tmp/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k build.keychain
           security list-keychains -d user -s build.keychain login.keychain
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          echo "has_cert=true" >> "$GITHUB_OUTPUT"
 
       # For beta tags, reset the rolling "beta" release so each beta push
       # overwrites the previous one (the app's beta channel always points at
-      # releases/beta/download/latest.json).
+      # releases/beta/download/latest.json). Both commands are best-effort:
+      # the very first beta has no prior release/tag to delete.
       - name: Reset rolling beta release
         if: contains(env.RELEASE_TAG, '-')
         env:
@@ -80,19 +93,22 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri updater signing — required for the auto-updater to verify
+          # downloaded updates. Independent of Apple codesign.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Apple codesign — only enabled when the cert imported successfully.
+          APPLE_CERTIFICATE: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_ID: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ steps.cert.outputs.has_cert == 'true' && secrets.APPLE_TEAM_ID || '' }}
         with:
           projectPath: src-tauri
           tagName: ${{ contains(env.RELEASE_TAG, '-') && 'beta' || env.RELEASE_TAG }}
           releaseName: ${{ contains(env.RELEASE_TAG, '-') && 'beta' || format('tmd {0}', env.RELEASE_TAG) }}
           releaseBody: "Download the asset below. The app also auto-updates from GitHub."
-          releaseDraft: ${{ !contains(env.RELEASE_TAG, '-') }}
+          releaseDraft: false
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           args: --target aarch64-apple-darwin
