@@ -1,8 +1,10 @@
 use std::cell::Cell;
+use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_updater::{Update, UpdaterExt};
+use tokio::time::timeout;
 use url::Url;
 
 use crate::commands::AppState;
@@ -47,12 +49,28 @@ fn map_update(u: &Update) -> UpdateInfo {
     }
 }
 
+/// Maximum time to wait for the beta channel before falling back to stable.
+/// A slow or broken beta endpoint must never block the stable check.
+const BETA_TIMEOUT: Duration = Duration::from_secs(8);
+
+/// Check the beta channel, but never block longer than `BETA_TIMEOUT`. A slow
+/// or broken beta endpoint (e.g. a beta release without a valid `latest.json`)
+/// must not prevent the stable channel from being checked, so any timeout or
+/// error is treated as "no beta update available".
+async fn beta_update(app: &AppHandle) -> Option<Update> {
+    let updater = build_updater(app, &[BETA_ENDPOINT]).ok()?;
+    match timeout(BETA_TIMEOUT, updater.check()).await {
+        Ok(Ok(Some(u))) => Some(u),
+        _ => None,
+    }
+}
+
 /// Select the pending update using the same channel rule as `check_update_cmd`:
 /// beta channel first when enabled, otherwise stable. Errors when no update is
 /// available on either channel.
 async fn pick_update(app: &AppHandle, beta: bool) -> Result<Update, String> {
     if beta {
-        if let Ok(Some(u)) = build_updater(app, &[BETA_ENDPOINT])?.check().await {
+        if let Some(u) = beta_update(app).await {
             return Ok(u);
         }
     }
@@ -71,16 +89,11 @@ async fn pick_update(app: &AppHandle, beta: bool) -> Result<Update, String> {
 #[tauri::command]
 pub async fn check_update_cmd(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
     let beta = app.state::<AppState>().store.get_settings().beta_updates;
-
     if beta {
-        match build_updater(&app, &[BETA_ENDPOINT])?.check().await {
-            Ok(Some(u)) => return Ok(Some(map_update(&u))),
-            // No update on beta, or beta endpoint unavailable: try stable.
-            Ok(None) => {}
-            Err(_) => {}
+        if let Some(u) = beta_update(&app).await {
+            return Ok(Some(map_update(&u)));
         }
     }
-
     let update = build_updater(&app, &[STABLE_ENDPOINT])?
         .check()
         .await

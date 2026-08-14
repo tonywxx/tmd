@@ -43,6 +43,7 @@ fn main() {
                 "print_window",
                 "log_frontend_error",
                 "check_update_cmd",
+                "download_update_cmd",
                 "install_update_cmd",
             ]),
         ),
