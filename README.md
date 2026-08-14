@@ -1,5 +1,3 @@
-# tmd — TONy Markdown
-
 <div align="center">
   <img src="img/app-icon.png" width="128" alt="tmd logo" />
   <h1>tmd</h1>
@@ -10,8 +8,6 @@
 > `tmd` is short for **TONy Markdown**.
 
 ---
-
-### Screenshot
 
 ![App UI](img/app-ui.png)
 
@@ -95,11 +91,11 @@ When a file is **modified on disk by an external process** while the current tab
 
 ### Settings
 
-| Group | Options |
-|-------|---------|
+| Group      | Options                                                                                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Appearance | Theme (System / Light / Dark), Accent color (7 choices), Editor font size (11–20), Editor font (6 mono choices), Preview font (6 choices), Line numbers |
-| Editing | Auto-save toggle, Auto-save delay, Show file dates in browser |
-| Advanced | Global hotkey toggle (default `⌘⇧Space` opens the "Open from Path" dialog), Beta update channel |
+| Editing    | Auto-save toggle, Auto-save delay, Show file dates in browser                                                                                           |
+| Advanced   | Global hotkey toggle (default `⌘⇧Space` opens the "Open from Path" dialog), Beta update channel                                                         |
 
 ### App Shell
 
@@ -118,25 +114,25 @@ When a file is **modified on disk by an external process** while the current tab
 
 ### Keyboard Shortcuts
 
-| Action | Shortcut |
-|--------|----------|
-| New File | ⌘N |
-| New Window | ⌘⇧N |
-| Open File | ⌘O |
-| Open Folder | ⌘⇧O |
-| Open from Path | ⌘⇧P |
-| Save | ⌘S |
-| Save As | ⌘⇧S |
-| Close Tab | ⌘W |
-| Close Window | ⌘⇧W |
-| Undo / Redo | ⌘Z / ⌘⇧Z |
-| Select All | ⌘A |
-| Copy Selection (with path prefix) | ⌘⌥C |
-| Find in Folder | ⌘⇧G |
-| Focus Mode | ⌘⇧F |
-| Reload / Force Reload | ⌘R / ⌘⇧R |
-| Toggle DevTools | ⌘⇧I |
-| Minimize | ⌘M |
+| Action                            | Shortcut |
+| --------------------------------- | -------- |
+| New File                          | ⌘N       |
+| New Window                        | ⌘⇧N      |
+| Open File                         | ⌘O       |
+| Open Folder                       | ⌘⇧O      |
+| Open from Path                    | ⌘⇧P      |
+| Save                              | ⌘S       |
+| Save As                           | ⌘⇧S      |
+| Close Tab                         | ⌘W       |
+| Close Window                      | ⌘⇧W      |
+| Undo / Redo                       | ⌘Z / ⌘⇧Z |
+| Select All                        | ⌘A       |
+| Copy Selection (with path prefix) | ⌘⌥C      |
+| Find in Folder                    | ⌘⇧G      |
+| Focus Mode                        | ⌘⇧F      |
+| Reload / Force Reload             | ⌘R / ⌘⇧R |
+| Toggle DevTools                   | ⌘⇧I      |
+| Minimize                          | ⌘M       |
 
 ---
 
@@ -168,13 +164,13 @@ When a file is **modified on disk by an external process** while the current tab
 
 ## Requirements
 
-| Tool | Recommended |
-|------|-------------|
-| Node.js | ≥ 20 |
-| pnpm | ≥ 9 |
-| Rust toolchain | stable (`rustup default stable`) |
-| macOS | 10.15+ (the project is macOS-optimized; the bundler and private API are macOS-only) |
-| Xcode Command Line Tools | `xcode-select --install` |
+| Tool                     | Recommended                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| Node.js                  | ≥ 20                                                                                |
+| pnpm                     | ≥ 9                                                                                 |
+| Rust toolchain           | stable (`rustup default stable`)                                                    |
+| macOS                    | 10.15+ (the project is macOS-optimized; the bundler and private API are macOS-only) |
+| Xcode Command Line Tools | `xcode-select --install`                                                            |
 
 > Tauri can also build & run on Linux/Windows, but `tauri.conf.json` enables `macOSPrivateApi` and `scripts/bundle.sh` is macOS-only.
 
