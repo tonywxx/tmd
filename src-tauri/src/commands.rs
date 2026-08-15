@@ -20,7 +20,8 @@ pub struct AppState {
 type CmdResult<T> = std::result::Result<T, String>;
 
 /// Diagnostic helper: frontend errors are appended here so they can be read
-/// from /tmp/tmd-frontend-error.log even when no display/screenshot is available.
+/// from /tmp/tmd-frontend-error.log even when no display/screenshot is
+/// available.
 #[tauri::command]
 pub fn log_frontend_error(msg: String) -> CmdResult<()> {
     use std::io::Write;

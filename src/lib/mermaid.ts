@@ -1,4 +1,15 @@
-import mermaid from "mermaid";
+// Mermaid is heavy (~hundreds of KB of core + dagre/katex/cytoscape). It is
+// only needed when a document actually contains a ```mermaid block, so we load
+// it lazily on first use. This keeps it out of the initial bundle/preload
+// graph and off the app's startup path.
+type MermaidApi = typeof import("mermaid")["default"];
+let mermaidApi: MermaidApi | null = null;
+async function loadMermaid(): Promise<MermaidApi> {
+  if (!mermaidApi) {
+    mermaidApi = (await import("mermaid")).default;
+  }
+  return mermaidApi;
+}
 
 // Mermaid support for the markdown preview: renders ```mermaid fenced blocks
 // (flowchart TD etc.) as SVG, with a per-diagram toolbar (zoom / reset /
@@ -35,7 +46,7 @@ export function nextMermaidId(): string {
   return `mmd${idCounter}`;
 }
 
-function applyTheme() {
+function applyTheme(mermaid: MermaidApi) {
   const key = themeKey();
   if (initialized && key === lastThemeKey) return;
   initialized = true;
@@ -57,7 +68,8 @@ function applyTheme() {
 const diagramCache = new Map<string, DiagramResult>();
 
 export async function renderMermaid(source: string): Promise<DiagramResult> {
-  applyTheme();
+  const mermaid = await loadMermaid();
+  applyTheme(mermaid);
   const key = `${lastThemeKey}|${source}`;
   const cached = diagramCache.get(key);
   if (cached) return cached;

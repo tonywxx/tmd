@@ -14,7 +14,7 @@ function showError(msg: string) {
   if (root) root.innerHTML = pre;
   if (document.body) document.body.innerHTML = pre;
   // eslint-disable-next-line no-console
-  console.error("[tmd-startup]", text);
+  console.error("[tmd]", text);
   try {
     void invoke("log_frontend_error", { msg: text });
   } catch {
