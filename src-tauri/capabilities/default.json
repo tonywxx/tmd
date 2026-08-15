@@ -40,6 +40,7 @@
     "deep-link:default",
     "allow-read-file",
     "allow-write-file",
+    "allow-write-file-base64",
     "allow-read-directory",
     "allow-file-stat",
     "allow-file-exists",

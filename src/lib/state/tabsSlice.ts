@@ -18,6 +18,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (
           id,
           content: tab.content ?? "",
           savedContent: tab.savedContent ?? tab.content ?? "",
+          sourceUrl: tab.sourceUrl ?? null,
           dirty: tab.dirty ?? false,
         },
       ],

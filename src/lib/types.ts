@@ -60,6 +60,9 @@ export interface Tab {
   id: number;
   name: string | null;
   filePath: string | null;
+  // When the tab was opened from a remote URL (Open from URL), this is the
+  // source URL. filePath stays null (it has no local path until saved).
+  sourceUrl?: string | null;
   content: string;
   savedContent: string;
   dirty: boolean;

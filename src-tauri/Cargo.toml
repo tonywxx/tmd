@@ -3,7 +3,7 @@ authors = ["tony"]
 description = "TONy Markdown App"
 edition = "2021"
 name = "tmd"
-version = "0.2.0"
+version = "0.2.1"
 
 [lib]
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -14,15 +14,15 @@ name = "tmd_lib"
 custom-protocol = ["tauri/custom-protocol"]
 
 [build-dependencies]
-tauri-build = {version = "2", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 base64 = "0.23.1"
 dirs = "6.0.0"
 notify = "8.2.0"
-serde = {version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri = {version = "2", features = ["macos-private-api"] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tokio = { version = "1", features = ["time"] }
 tauri-plugin-deep-link = "2"
 tauri-plugin-dialog = "2"

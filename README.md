@@ -53,13 +53,14 @@
 - **Bracket matching, line wrapping, Tab-to-indent** and other standard CodeMirror behaviors.
 - **Git Gutter** — the left gutter marks lines that differ from the `git HEAD` baseline (added / modified / removed); for untracked files it compares against the saved content on disk.
 - **Smart formatting toolbar (toggle actions)** — bold / italic / strikethrough / inline code / code block / link / H1–H6 / bullet list / ordered list / task list / blockquote / horizontal rule. Clicking the same button again reverses the formatting.
+- **Reliable clipboard across all surfaces** — copy / cut / paste work correctly in the editor, in native input fields (e.g. the Open from Path / Open from URL dialogs), and on text selected in the live preview. Selecting prose in the preview and pressing ⌘C copies that selection (not the editor's), and a single ⌘V gesture never inserts text twice.
 
 ### Live Preview
 
 - **GFM rendering** (`marked`) **+ DOMPurify sanitization** for safe rendering of arbitrary Markdown.
 - **Task-list checkboxes** keep their interactive attributes.
 - **Local images are inlined as base64 data URIs** — no `local-resource://` protocol exposed, no WebView cross-origin issues.
-- **Mermaid diagrams** — ```` ```mermaid ```` code blocks render into zoomable, pannable, PNG-exportable interactive figures; wheel-zoom, drag-to-pan, and dark-mode aware.
+- **Mermaid diagrams** — ```` ```mermaid ```` code blocks render into zoomable, pannable, PNG-exportable interactive figures; wheel-zoom, drag-to-pan, and dark-mode aware. A **Show code** toggle on each figure flips between the rendered diagram and its raw source.
 - **External links open in the system browser**; internal anchors and relative `.md` links use default behavior.
 - **Proportional editor ↔ preview scroll sync**, cooldown-guarded to avoid jitter.
 
@@ -69,6 +70,8 @@
 - **Right-click menu**: Open / Reveal in Finder / Rename / Move to Trash / Add or Remove Favorite / New File Here / New Folder Here.
 - **Favorites** — pin any file or folder to the top of the sidebar.
 - **Resizable sidebar**, toggle to collapse/expand.
+- **Open from URL (⌘⇧U)** — paste an `http(s)` link (e.g. a GitHub gist raw URL) to fetch its Markdown into a new tab; the tab keeps a link indicator and Save defaults to the original filename.
+- **Drag & drop** — drop one or more `.md` files anywhere in the window to open them as tabs; dragging over the editor or preview highlights the drop target.
 - **Session persistence** — on relaunch automatically restores open files, the active tab, the current folder, and the last window position & size.
 
 ### Tabs
@@ -136,6 +139,7 @@ When a file is **modified on disk by an external process** while the current tab
 | Open File                         | ⌘O       |
 | Open Folder                       | ⌘⇧O      |
 | Open from Path                    | ⌘⇧P      |
+| Open from URL                     | ⌘⇧U      |
 | Save                              | ⌘S       |
 | Save As                           | ⌘⇧S      |
 | Close Tab                         | ⌘W       |
@@ -250,7 +254,7 @@ Output: `src-tauri/target/release/bundle/macos/tmd.app`.
 
 ### User settings (editable at runtime)
 
-Open **Settings** from the menu or the gear icon at the top-right of the toolbar. All changes are written immediately to:
+Open **Settings** from the menu or the gear icon at the top-right of the toolbar. Every change applies immediately (the UI reacts and the file is written at once); **Cancel** reverts everything back to the state the dialog had when it opened, and **Done** just closes it. Settings are persisted to:
 
 - macOS: `~/Library/Application Support/bid.adaq.tmd/settings.json`
 - Linux: `~/.local/share/bid.adaq.tmd/settings.json`
@@ -334,7 +338,7 @@ tmd/
 │   │   ├── TabBar.tsx            # Tabs
 │   │   ├── WorkspaceToolbar.tsx  # Format toolbar + view switch + Help/Settings
 │   │   ├── Icon.tsx              # Icon wrapper
-│   │   └── dialogs/              # Settings / About / DiffView / Find / OpenPath / Update / Toasts
+│   │   └── dialogs/              # Settings / About / DiffView / Find / OpenPath / OpenUrl / Update / Toasts
 │   └── lib/
 │       ├── bridge.ts             # Typed IPC wrappers
 │       ├── commands.ts           # Command registry
@@ -347,6 +351,7 @@ tmd/
 │       ├── mermaid.ts            # Mermaid render + SVG→PNG
 │       ├── mermaidFigure.ts      # Interactive figure (zoom/pan/download)
 │       ├── diff.ts               # Three-way merge builder
+│       ├── dragDrop.ts           # Window-wide .md drag & drop → tabs
 │       ├── editorPort.ts         # Tab-agnostic editor operation port
 │       ├── scrollSync.ts         # Editor ↔ preview scroll sync
 │       ├── pathutil.ts           # Cross-platform path helpers

@@ -126,6 +126,15 @@ body {
   flex: 0 0 auto;
 }
 
+/* Drag-over highlight shown while a .md file is dragged over the editor or
+ * preview pane (window-wide Tauri drag-drop). */
+.editor-col.drag-over,
+.preview-col.drag-over {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
 .splitter {
   flex: 0 0 10px;
   cursor: col-resize;
@@ -454,6 +463,16 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.tab-source {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  margin-right: 3px;
+}
+.tab-source svg {
+  width: 12px;
+  height: 12px;
+}
 .tab-close {
   color: var(--text-dim);
   font-size: 14px;
@@ -550,8 +569,14 @@ body {
   overflow-x: auto;
 }
 .markdown-body pre code {
-  background: transparent;
+  /* Per-line background that spans the full line width, including lines that
+   * overflow and scroll horizontally, so the code region stays tinted end to
+   * end. --code-bg is a light gray in light theme, darker in dark theme. */
+  background: var(--code-bg);
   padding: 0;
+  display: inline-block;
+  min-width: 100%;
+  vertical-align: top;
 }
 .markdown-body blockquote {
   margin: 0.8em 0;
@@ -1028,6 +1053,33 @@ body {
   max-width: 100% !important;
   height: auto !important;
 }
+/* Raw-source view toggled by the toolbar "Show code" button. Hidden until the
+ * figure enters .is-code mode. */
+.mermaid-code {
+  display: none;
+  margin: 0;
+  padding: 16px;
+  max-height: 70vh;
+  overflow: auto;
+  white-space: pre;
+  tab-size: 2;
+  font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg-code, #1e1e1e);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.mermaid-figure.is-code .mermaid-viewport {
+  display: none;
+}
+.mermaid-figure.is-code .mermaid-code {
+  display: block;
+}
+.mermaid-figure.is-code .mermaid-toolbar {
+  opacity: 1;
+}
 .mermaid-toolbar {
   position: absolute;
   top: 8px;
@@ -1119,6 +1171,13 @@ body {
     transform: none !important;
   }
   .mermaid-toolbar {
+    display: none !important;
+  }
+  /* Print always shows the rendered diagram, never the raw-source view. */
+  .mermaid-figure.is-code .mermaid-viewport {
+    display: block !important;
+  }
+  .mermaid-code {
     display: none !important;
   }
 .mermaid-error {

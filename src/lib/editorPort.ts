@@ -33,6 +33,25 @@ export function getActiveEditorPort(): EditorPort | null {
   return activePort;
 }
 
+// ---- Clipboard de-duplication ----
+//
+// In the editor, a single copy/cut/paste user action can reach us through two
+// paths at once: CodeMirror's own native DOM handler and the menu-driven
+// `executeCommand(...)`. Both would insert (paste) or write (copy/cut) the
+// text, which doubles the result. Only one path may act per gesture, so the
+// first path to run claims the operation for a short window and later arrivals
+// bail out. Also guards the menu command against CodeMirror's native handler
+// when a Tauri menu accelerator is not consumed by the OS.
+const CLIPBOARD_CLAIM_MS = 400;
+let lastClipboardClaim = 0;
+
+export function claimClipboardOp(): boolean {
+  const now = Date.now();
+  if (now - lastClipboardClaim < CLIPBOARD_CLAIM_MS) return false;
+  lastClipboardClaim = now;
+  return true;
+}
+
 /**
  * Replace the editor document only when the target tab is the one mounted.
  * Used when content arrives from outside the editor (external change, merge

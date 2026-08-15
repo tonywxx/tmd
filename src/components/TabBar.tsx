@@ -1,4 +1,4 @@
-import { Plus, X, Sidebar } from "lucide-react";
+import { Plus, X, Sidebar, Link } from "lucide-react";
 import { Icon } from "./Icon";
 import { useStore } from "../lib/store";
 import { newUntitledTab } from "../lib/fileops";
@@ -36,8 +36,13 @@ export default function TabBar() {
                 closeTab(t.id);
               }
             }}
-            title={t.filePath ?? t.name ?? "Untitled"}
+            title={t.filePath ?? t.sourceUrl ?? t.name ?? "Untitled"}
           >
+            {t.sourceUrl && (
+              <span className="tab-source" title={t.sourceUrl}>
+                <Icon icon={Link} />
+              </span>
+            )}
             <span className="tab-name">{t.name ?? "Untitled"}</span>
             {t.dirty ? (
               <span

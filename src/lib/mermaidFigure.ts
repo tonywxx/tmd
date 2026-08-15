@@ -1,4 +1,4 @@
-import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Minimize2, Download } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Minimize2, Download, Code, Eye } from "lucide-react";
 import { lucideSvg } from "./iconSvg";
 import { nextMermaidId, renderMermaid, svgToPngDataUri } from "./mermaid";
 import { pickSaveImagePath } from "./bridge";
@@ -85,7 +85,9 @@ function buildFigure(diagram: { id: string; svg: string; bind: (el: HTMLElement)
     <div class="mermaid-viewport">
       <div class="mermaid-inner">${svgHtml}</div>
     </div>
+    <pre class="mermaid-code"></pre>
     <div class="mermaid-toolbar">
+      <button type="button" class="mermaid-btn" data-action="toggle-code" title="Show code">${lucideSvg(Code)}</button>
       <button type="button" class="mermaid-btn" data-action="zoom-in" title="Zoom in">${lucideSvg(ZoomIn)}</button>
       <button type="button" class="mermaid-btn" data-action="zoom-out" title="Zoom out">${lucideSvg(ZoomOut)}</button>
       <button type="button" class="mermaid-btn" data-action="reset" title="Reset view">${lucideSvg(RotateCcw)}</button>
@@ -93,10 +95,15 @@ function buildFigure(diagram: { id: string; svg: string; bind: (el: HTMLElement)
       <button type="button" class="mermaid-btn" data-action="save" title="Save as PNG">${lucideSvg(Download)}</button>
     </div>`;
 
+  // Code view: text-only so a malicious diagram source can never inject HTML.
+  const codeEl = figure.querySelector(".mermaid-code") as HTMLElement;
+  codeEl.textContent = source;
+
   const viewport = figure.querySelector(".mermaid-viewport") as HTMLElement;
   const inner = figure.querySelector(".mermaid-inner") as HTMLElement;
   diagram.bind(inner);
   setupPanZoom(figure, viewport, inner);
+  setupToggleCode(figure.querySelector('[data-action="toggle-code"]') as HTMLButtonElement, figure);
   setupSave(figure.querySelector('[data-action="save"]') as HTMLButtonElement, source);
   setupFullscreen(figure.querySelector('[data-action="fullscreen"]') as HTMLButtonElement, figure);
   return figure;
@@ -275,6 +282,19 @@ function setFullscreen(
       }
     }
   }
+}
+
+function setupToggleCode(btn: HTMLButtonElement | null, figure: HTMLElement): void {
+  if (!btn) return;
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const on = !figure.classList.contains("is-code");
+    figure.classList.toggle("is-code", on);
+    btn.innerHTML = lucideSvg(on ? Eye : Code);
+    btn.title = on ? "Show diagram" : "Show code";
+    btn.setAttribute("aria-label", btn.title);
+  });
 }
 
 function setupFullscreen(

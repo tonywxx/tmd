@@ -13,10 +13,12 @@ import AboutDialog from "./components/dialogs/AboutDialog";
 import DiffView from "./components/dialogs/DiffView";
 import FindInFolder from "./components/dialogs/FindInFolder";
 import OpenPathModal from "./components/dialogs/OpenPathModal";
+import OpenUrlModal from "./components/dialogs/OpenUrlModal";
 import Toasts from "./components/dialogs/Toasts";
 import { useStore } from "./lib/store";
 import { api } from "./lib/bridge";
 import { openFileByPath } from "./lib/fileops";
+import { registerDragDrop } from "./lib/dragDrop";
 import { executeCommand } from "./lib/commands";
 import { registerAppCommands } from "./lib/appCommands";
 import { checkForUpdates, downloadUpdate } from "./lib/updater";
@@ -145,6 +147,7 @@ export default function App() {
         });
       }
       unlisteners = await wireEvents();
+      unlisteners.push(await registerDragDrop());
     })();
     return () => {
       unlisteners.forEach((u) => u());
@@ -214,6 +217,7 @@ export default function App() {
     await on("menu-new-file", () => void executeCommand("new-file"));
     await on("menu-open-file", () => void executeCommand("open-file"));
     await on("open-from-path", () => void executeCommand("open-path"));
+    await on("open-from-url", () => void executeCommand("open-from-url"));
     await on("menu-open-folder", () => void executeCommand("open-folder"));
     await on("menu-save", () => void executeCommand("save"));
     await on("menu-save-as", () => void executeCommand("save-as"));
@@ -347,6 +351,7 @@ export default function App() {
       {useStore((s) => s.diffData) && <DiffView />}
       {useStore((s) => s.findInFolderOpen) && <FindInFolder />}
       {useStore((s) => s.openPathOpen) && <OpenPathModal />}
+      {useStore((s) => s.openUrlOpen) && <OpenUrlModal />}
       <Toasts />
 
       {ctxMenu && (

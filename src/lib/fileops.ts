@@ -107,3 +107,71 @@ export async function duplicateActiveTab(): Promise<void> {
     });
   }
 }
+
+// Open a remote markdown document fetched over HTTP(S) as a tab. The tab has
+// no local filePath; its source URL is remembered on `sourceUrl` so Save can
+// default to the original filename and the tab bar can show a link indicator.
+export async function openFileFromUrl(url: string): Promise<number | null> {
+  const store = useStore.getState();
+  const trimmed = url.trim().replace(/\s+/g, "");
+  if (!/^https?:\/\//i.test(trimmed)) {
+    store.pushToast("Enter a valid http(s) URL", "error");
+    return null;
+  }
+  // focus an existing tab opened from the same URL
+  const existing = store.tabs.find((t) => t.sourceUrl === trimmed);
+  if (existing) {
+    store.setActiveTab(existing.id);
+    return existing.id;
+  }
+  let res: Response;
+  try {
+    res = await fetch(trimmed, { redirect: "follow" });
+  } catch (e) {
+    store.pushToast(`Could not fetch URL: ${String(e)}`, "error");
+    return null;
+  }
+  if (!res.ok) {
+    store.pushToast(`Fetch failed: HTTP ${res.status}`, "error");
+    return null;
+  }
+  if ((res.headers.get("content-length") ?? "0") !== "0") {
+    const len = Number(res.headers.get("content-length"));
+    if (len > 10 * 1024 * 1024) {
+      store.pushToast("File is too large to open (max 10 MB)", "error");
+      return null;
+    }
+  }
+  let content: string;
+  try {
+    content = await res.text();
+  } catch (e) {
+    store.pushToast(`Could not read response: ${String(e)}`, "error");
+    return null;
+  }
+  if (content.length > 10 * 1024 * 1024) {
+    store.pushToast("File is too large to open (max 10 MB)", "error");
+    return null;
+  }
+  const name = nameFromUrl(trimmed);
+  const id = store.addTab({
+    name,
+    filePath: null,
+    sourceUrl: trimmed,
+    content,
+    savedContent: content,
+    dirty: false,
+  });
+  return id;
+}
+
+function nameFromUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const base = decodeURIComponent(u.pathname.split("/").pop() ?? "");
+    if (base && base !== "") return base;
+    return u.hostname;
+  } catch {
+    return "untitled.md";
+  }
+}

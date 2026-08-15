@@ -3,8 +3,8 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useStore } from "./store";
 import { api, pickSavePath } from "./bridge";
-import { getActiveEditorPort } from "./editorPort";
-import { openFileByPath, newUntitledTab, duplicateActiveTab } from "./fileops";
+import { getActiveEditorPort, claimClipboardOp } from "./editorPort";
+import { openFileByPath, newUntitledTab, duplicateActiveTab, openFileFromUrl } from "./fileops";
 import { persistTab, saveTabAs, syncFromDisk } from "./persist";
 import { buildDiff } from "./diff";
 import { applyTextTransform } from "./textTransforms";
@@ -24,6 +24,85 @@ import type { TextTransform } from "./types";
 
 let currentZoom = 1;
 
+// When focus is on a native <input>/<textarea> (e.g. the Open from URL /
+// Open from Path dialogs), Tauri's menu accelerator (⌘C/⌘V/⌘X) is consumed by
+// the app and the webview does NOT perform a native clipboard action, so we
+// must do it ourselves. Two hazards to avoid:
+//   1. A single gesture can reach us twice (the accelerator's menu event AND,
+//      on platforms where the webview also emits a native paste, that native
+//      paste) — both would insert, doubling the text.
+//   2. The field is a controlled React input; writing it via setRangeText
+//      alone leaves React's state stale, so the next render resets it to ""
+//      and the text vanishes. We re-dispatch an `input` event so onChange
+//      syncs React state.
+// `pasteGestureActive` collapses a single user gesture into one operation
+// regardless of which paths fire, and `activeNativeEditable` finds the field.
+const PASTE_GESTURE_MS = 400;
+let lastPasteGesture = 0;
+export function markPasteGesture(): void {
+  lastPasteGesture = Date.now();
+}
+export function pasteGestureActive(): boolean {
+  return Date.now() - lastPasteGesture < PASTE_GESTURE_MS;
+}
+
+function activeNativeEditable(): HTMLInputElement | HTMLTextAreaElement | null {
+  const el = document.activeElement as HTMLElement | null;
+  if (!el) return null;
+  if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+    return el as HTMLInputElement | HTMLTextAreaElement;
+  }
+  return null;
+}
+
+// Sync a programmatic DOM edit of a controlled input back into React state by
+// re-emitting the `input` event that React's onChange listens for.
+function syncControlledInput(el: HTMLInputElement | HTMLTextAreaElement): void {
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+// Insert text at the current selection of the focused native input/textarea,
+// then sync React state (controlled inputs ignore raw DOM edits otherwise).
+// Shared by the ⌘V menu command and the dialogs' onPaste handlers so every
+// paste path inserts identically. Returns false when no native editable is
+// focused so callers can fall back to the editor port.
+export function pasteTextIntoNativeEditable(text: string): boolean {
+  const el = activeNativeEditable();
+  if (!el) return false;
+  const s = el.selectionStart ?? el.value.length;
+  const e = el.selectionEnd ?? el.value.length;
+  el.setRangeText(text, s, e, "end");
+  syncControlledInput(el);
+  return true;
+}
+
+// True when the current DOM text selection lives inside a CodeMirror editor.
+// CodeMirror manages its own clipboard via the editor port, so a selection
+// there must NOT be copied as raw DOM text.
+function selectionInsideEditor(sel: Selection): boolean {
+  const node = sel.anchorNode;
+  if (!node) return false;
+  const el =
+    node.nodeType === Node.ELEMENT_NODE
+      ? (node as Element)
+      : node.parentElement;
+  return !!el && !!el.closest(".editor-host, .cm-editor");
+}
+
+// Copy the current non-editor DOM text selection (e.g. selected prose in the
+// preview). Returns false when there is no usable selection outside the editor
+// so the caller can fall back to the editor port. This is what makes selecting
+// text in the preview and pressing ⌘C work, since the Tauri "Copy" menu
+// accelerator otherwise always routes clipboard ops to the editor.
+function copyDomSelection(): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || selectionInsideEditor(sel)) return false;
+  const text = sel.toString();
+  if (!text) return false;
+  void navigator.clipboard.writeText(text);
+  return true;
+}
+
 export function registerAppCommands(): void {
   // ---- documents ----
   registerCommand("new-file", () => void newUntitledTab());
@@ -31,6 +110,12 @@ export function registerAppCommands(): void {
   registerCommand("open-folder", () => void handleOpenFolder());
   registerCommand("open-recent", (path) => void openFileByPath(String(path)));
   registerCommand("open-path", () => useStore.getState().setOpenPathOpen(true));
+  registerCommand("open-from-url", () =>
+    useStore.getState().setOpenUrlOpen(true),
+  );
+  registerCommand("open-url", (url) =>
+    void openFileFromUrl(String(url)),
+  );
   registerCommand("save", () => void saveActiveTab());
   registerCommand("save-as", () => void saveActiveTabAs());
   registerCommand("duplicate", () => void duplicateActiveTab());
@@ -47,10 +132,45 @@ export function registerAppCommands(): void {
   // ---- editor ----
   registerCommand("undo", () => getActiveEditorPort()?.undo());
   registerCommand("redo", () => getActiveEditorPort()?.redo());
-  registerCommand("cut", () => getActiveEditorPort()?.cutSelection());
-  registerCommand("copy", () => getActiveEditorPort()?.copySelection());
+  registerCommand("cut", () => {
+    if (!claimClipboardOp()) return;
+    const el = activeNativeEditable();
+    if (el) {
+      const s = el.selectionStart ?? 0;
+      const e = el.selectionEnd ?? 0;
+      void navigator.clipboard.writeText(el.value.slice(s, e));
+      el.setRangeText("", s, e, "end");
+      syncControlledInput(el);
+      return;
+    }
+    // The preview is not editable, so cutting a selection there is a no-op;
+    // copy it instead (matches native cut-on-non-editable behavior).
+    if (copyDomSelection()) return;
+    getActiveEditorPort()?.cutSelection();
+  });
+  registerCommand("copy", () => {
+    if (!claimClipboardOp()) return;
+    const el = activeNativeEditable();
+    if (el) {
+      const s = el.selectionStart ?? 0;
+      const e = el.selectionEnd ?? 0;
+      void navigator.clipboard.writeText(el.value.slice(s, e));
+      return;
+    }
+    // Selecting text in the preview (or anywhere outside the editor) and
+    // pressing ⌘C must copy that selection, not the editor's.
+    if (copyDomSelection()) return;
+    getActiveEditorPort()?.copySelection();
+  });
   registerCommand("paste", async () => {
+    // If this gesture was already served by a native paste event (e.g. a
+    // right-click paste, or a platform where the accelerator also emits a
+    // native paste), skip the manual insert so we don't duplicate it.
+    if (pasteGestureActive()) return;
+    markPasteGesture();
+    if (!claimClipboardOp()) return;
     const text = await navigator.clipboard.readText().catch(() => "");
+    if (pasteTextIntoNativeEditable(text)) return;
     getActiveEditorPort()?.paste(text);
   });
   registerCommand("select-all", () => getActiveEditorPort()?.selectAll());

@@ -39,6 +39,7 @@ export interface ShellSlice {
   settingsOpen: boolean;
   aboutOpen: boolean;
   openPathOpen: boolean;
+  openUrlOpen: boolean;
   findInFolderOpen: boolean;
   diffData: DiffData | null;
   updateInfo: UpdateInfo | null;
@@ -48,6 +49,7 @@ export interface ShellSlice {
   setSettingsOpen: (v: boolean) => void;
   setAboutOpen: (v: boolean) => void;
   setOpenPathOpen: (v: boolean) => void;
+  setOpenUrlOpen: (v: boolean) => void;
   setFindInFolderOpen: (v: boolean) => void;
   setDiffData: (d: DiffData | null) => void;
   setUpdateInfo: (u: UpdateInfo | null) => void;

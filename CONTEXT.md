@@ -34,6 +34,12 @@ This file is the single source of ubiquitous language for the project.
   forwards the URL to the running window.
 - **Global hotkey** — a system-wide shortcut (default ⌘⇧Space) that opens the
   "Open from Path" dialog even when the app is unfocused.
+- **Open from URL** — paste an `http(s)` link (e.g. a GitHub gist raw URL) and
+  fetch its Markdown into a new tab. The tab has no local `filePath`; its
+  `sourceUrl` is remembered so Save can default to the original filename and
+  the tab bar shows a link indicator. Fetching happens in the webview (CSP
+  allows `https:`/`http:` in `connect-src`) and is CORS-limited to endpoints
+  that permit cross-origin reads.
 - **Session** — the set of open files, the active file, and the current folder,
   persisted per window and restored on launch.
 - **Recent files / directories** — most-recently-used paths, persisted in

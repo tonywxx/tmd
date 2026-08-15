@@ -8,6 +8,8 @@ export const HELP_MD = `# tmd — Markdown Feature Guide
 This file is a living example of every Markdown feature **tmd** supports.
 Edit it, watch the preview update live, and use it as a cheat sheet.
 
+![tmd app icon](https://github.com/tonywxx/tmd/blob/main/img/app-icon.png)
+
 > Tip: press **?** is not bound — but the **Help** button always re-opens
 > this file from your home directory.
 
@@ -66,11 +68,11 @@ Superscript: H~2~O is water, E = mc^2^ is energy.
 
 ## Links & Images
 
-[Visit the tmd project](https://example.com)
+[Visit the tmd project](https://github.com/tonywxx/tmd)
 
-An autolink: <https://example.com>
+An autolink: <https://github.com/tonywxx/tmd>
 
-![Alt text for an image](https://example.com/image.png)
+![tmd app UI](https://github.com/tonywxx/tmd/blob/main/img/app-ui.png)
 
 ---
 

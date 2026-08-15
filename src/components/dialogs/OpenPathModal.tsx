@@ -3,6 +3,8 @@ import { useStore } from "../../lib/store";
 import { getFileSystem } from "../../lib/fs";
 import { openFileByPath } from "../../lib/fileops";
 import { executeCommand } from "../../lib/commands";
+import { claimClipboardOp } from "../../lib/editorPort";
+import { pasteTextIntoNativeEditable } from "../../lib/appCommands";
 
 export default function OpenPathModal() {
   const setOpen = useStore((s) => s.setOpenPathOpen);
@@ -52,6 +54,20 @@ export default function OpenPathModal() {
             placeholder="/path/to/file.md  (optionally :LINE or ?line=N)"
             value={path}
             onChange={(e) => parse(e.target.value)}
+            // A single ⌘V can reach this field twice: as a DOM paste AND as
+            // the menu-accelerator "paste" command. Always suppress the native
+            // insert and let whichever path first claims the clipboard op do
+            // the insertion (mirroring the editor's clipboard handlers) so the
+            // path text is never inserted twice.
+            onPaste={(e) => {
+              e.preventDefault();
+              if (claimClipboardOp()) {
+                void navigator.clipboard
+                  .readText()
+                  .catch(() => "")
+                  .then((text) => pasteTextIntoNativeEditable(text));
+              }
+            }}
             onKeyDown={(e) => e.key === "Enter" && open()}
           />
         </div>

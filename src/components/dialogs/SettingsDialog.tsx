@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef } from "react";
 import { useStore } from "../../lib/store";
 import { api } from "../../lib/bridge";
 import {
@@ -10,38 +10,63 @@ import {
 } from "../../lib/constants";
 import type { AccentColor, Settings, Theme } from "../../lib/types";
 
+const GLOBAL_HOTKEY_KEYS: (keyof Settings)[] = [
+  "globalHotkeysEnabled",
+  "globalHotkeyOpenPath",
+];
+
 export default function SettingsDialog() {
   const settings = useStore((s) => s.settings);
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
   const updateSettings = useStore((s) => s.updateSettings);
-  const pushToast = useStore((s) => s.pushToast);
-  const [draft, setDraft] = useState<Settings>(settings);
 
-  function patch(p: Partial<Settings>) {
-    setDraft((d) => ({ ...d, ...p }));
-  }
+  // Snapshot taken when the dialog opens so Cancel can revert live changes
+  // (which are already persisted as the user makes them).
+  const snapshot = useRef<Settings>(settings);
 
-  async function save() {
+  // Apply a settings change immediately: update the store so the UI reacts,
+  // persist to disk, and re-register the global hotkey when its fields change.
+  async function apply(p: Partial<Settings>) {
+    updateSettings(p);
+    const next = useStore.getState().settings;
     try {
-      await api.setSettings(draft);
-      updateSettings(draft);
-      await api.updateGlobalHotkey(draft);
-      setSettingsOpen(false);
-      pushToast("Settings saved", "success");
+      await api.setSettings(next);
+      if (GLOBAL_HOTKEY_KEYS.some((k) => k in p)) {
+        await api.updateGlobalHotkey(next);
+      }
     } catch (e) {
-      pushToast(`Could not save settings: ${String(e)}`, "error");
+      useStore.getState().pushToast(`Could not save settings: ${String(e)}`, "error");
     }
   }
 
+  function close() {
+    setSettingsOpen(false);
+  }
+
+  async function cancel() {
+    const prev = snapshot.current;
+    updateSettings(prev);
+    try {
+      await api.setSettings(prev);
+      await api.updateGlobalHotkey(prev);
+    } catch {
+      /* ignore revert failures */
+    }
+    setSettingsOpen(false);
+  }
+
   return (
-    <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}>
+    <div className="modal-backdrop" onClick={close}>
       <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">Settings</div>
         <div className="modal-body">
           <section>
             <h3>Appearance</h3>
             <label>Theme</label>
-            <select value={draft.theme} onChange={(e) => patch({ theme: e.target.value as Theme })}>
+            <select
+              value={settings.theme}
+              onChange={(e) => apply({ theme: e.target.value as Theme })}
+            >
               <option value="system">System</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -52,15 +77,18 @@ export default function SettingsDialog() {
               {ACCENTS.map((a: AccentColor) => (
                 <button
                   key={a}
-                  className={"accent-swatch accent-" + a + (draft.accentColor === a ? " selected" : "")}
-                  onClick={() => patch({ accentColor: a })}
+                  className={"accent-swatch accent-" + a + (settings.accentColor === a ? " selected" : "")}
+                  onClick={() => apply({ accentColor: a })}
                   title={a}
                 />
               ))}
             </div>
 
             <label>Editor Font Size</label>
-            <select value={draft.fontSize} onChange={(e) => patch({ fontSize: Number(e.target.value) })}>
+            <select
+              value={settings.fontSize}
+              onChange={(e) => apply({ fontSize: Number(e.target.value) })}
+            >
               {FONT_SIZE_OPTIONS.map((f) => (
                 <option key={f} value={f}>
                   {f}
@@ -69,7 +97,10 @@ export default function SettingsDialog() {
             </select>
 
             <label>Editor Font</label>
-            <select value={draft.fontFamily} onChange={(e) => patch({ fontFamily: e.target.value })}>
+            <select
+              value={settings.fontFamily}
+              onChange={(e) => apply({ fontFamily: e.target.value })}
+            >
               {EDITOR_FONT_OPTIONS.map((f) => (
                 <option key={f.value} value={f.value}>
                   {f.label}
@@ -78,7 +109,10 @@ export default function SettingsDialog() {
             </select>
 
             <label>Preview Font</label>
-            <select value={draft.previewFontFamily} onChange={(e) => patch({ previewFontFamily: e.target.value })}>
+            <select
+              value={settings.previewFontFamily}
+              onChange={(e) => apply({ previewFontFamily: e.target.value })}
+            >
               {PREVIEW_FONT_OPTIONS.map((f) => (
                 <option key={f.value} value={f.value}>
                   {f.label}
@@ -89,8 +123,8 @@ export default function SettingsDialog() {
             <label className="checkbox">
               <input
                 type="checkbox"
-                checked={draft.showLineNumbers}
-                onChange={(e) => patch({ showLineNumbers: e.target.checked })}
+                checked={settings.showLineNumbers}
+                onChange={(e) => apply({ showLineNumbers: e.target.checked })}
               />
               Show line numbers
             </label>
@@ -101,17 +135,17 @@ export default function SettingsDialog() {
             <label className="checkbox">
               <input
                 type="checkbox"
-                checked={draft.autoSave}
-                onChange={(e) => patch({ autoSave: e.target.checked })}
+                checked={settings.autoSave}
+                onChange={(e) => apply({ autoSave: e.target.checked })}
               />
               Auto-save
             </label>
-            {draft.autoSave && (
+            {settings.autoSave && (
               <>
                 <label>Auto-save delay (ms)</label>
                 <select
-                  value={draft.autoSaveDelay}
-                  onChange={(e) => patch({ autoSaveDelay: Number(e.target.value) })}
+                  value={settings.autoSaveDelay}
+                  onChange={(e) => apply({ autoSaveDelay: Number(e.target.value) })}
                 >
                   {AUTO_SAVE_OPTIONS.map((o) => (
                     <option key={o} value={o}>
@@ -124,8 +158,8 @@ export default function SettingsDialog() {
             <label className="checkbox">
               <input
                 type="checkbox"
-                checked={draft.showFileDates}
-                onChange={(e) => patch({ showFileDates: e.target.checked })}
+                checked={settings.showFileDates}
+                onChange={(e) => apply({ showFileDates: e.target.checked })}
               />
               Show file dates in browser
             </label>
@@ -136,33 +170,33 @@ export default function SettingsDialog() {
             <label className="checkbox">
               <input
                 type="checkbox"
-                checked={draft.globalHotkeysEnabled}
-                onChange={(e) => patch({ globalHotkeysEnabled: e.target.checked })}
+                checked={settings.globalHotkeysEnabled}
+                onChange={(e) => apply({ globalHotkeysEnabled: e.target.checked })}
               />
               Enable global hotkey (Open from Path)
             </label>
             <label>Global hotkey</label>
             <input
               type="text"
-              value={draft.globalHotkeyOpenPath}
-              onChange={(e) => patch({ globalHotkeyOpenPath: e.target.value })}
+              value={settings.globalHotkeyOpenPath}
+              onChange={(e) => apply({ globalHotkeyOpenPath: e.target.value })}
             />
             <label className="checkbox">
               <input
                 type="checkbox"
-                checked={draft.betaUpdates}
-                onChange={(e) => patch({ betaUpdates: e.target.checked })}
+                checked={settings.betaUpdates}
+                onChange={(e) => apply({ betaUpdates: e.target.checked })}
               />
               Receive beta updates
             </label>
           </section>
         </div>
         <div className="modal-footer">
-          <button className="btn" onClick={() => setSettingsOpen(false)}>
+          <button className="btn" onClick={cancel}>
             Cancel
           </button>
-          <button className="btn primary" onClick={save}>
-            Save
+          <button className="btn primary" onClick={close}>
+            Done
           </button>
         </div>
       </div>

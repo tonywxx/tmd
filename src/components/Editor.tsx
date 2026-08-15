@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, gutter, GutterMarker, drawSelection } from "@codemirror/view";
-import { EditorState, Compartment, StateField, StateEffect, Extension, EditorSelection } from "@codemirror/state";
+import { EditorState, Compartment, StateField, StateEffect, Extension, EditorSelection, Prec } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
@@ -9,7 +9,7 @@ import { useStore } from "../lib/store";
 import { applyFormatting } from "../lib/formatActions";
 import { computeChangedLines } from "../lib/changedLines";
 import { editorStatesRef, gitBaselineRef, autoSaveTimers, type SelectionInfo } from "../lib/refs";
-import { setActiveEditorPort, getActiveEditorPort, type EditorPort } from "../lib/editorPort";
+import { setActiveEditorPort, getActiveEditorPort, claimClipboardOp, type EditorPort } from "../lib/editorPort";
 import { scrollSync } from "../lib/scrollSync";
 import { persistTab } from "../lib/persist";
 import type { Settings } from "../lib/types";
@@ -79,15 +79,16 @@ function themeExtension(settings: Settings): Extension {
         padding: "16px 0",
       },
       ".cm-gutters": {
-        backgroundColor: "transparent",
+        backgroundColor: isDark ? "#15181d" : "#eef0f3",
         border: "none",
+        borderRight: `1px solid ${isDark ? "#2a2f39" : "#dadce0"}`,
         color: isDark ? "#5b6270" : "#a0a4ad",
       },
       ".cm-activeLine": {
         backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
       },
       ".cm-activeLineGutter": {
-        backgroundColor: "transparent",
+        backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
       },
       "&.cm-focused .cm-cursor": {
         borderLeftColor: "var(--accent)",
@@ -249,6 +250,36 @@ export default function Editor() {
   return <div className="editor-host" ref={containerRef} />;
 }
 
+// Intercepts copy/cut/paste at the highest precedence so CodeMirror's own
+// native handler never also fires. This is what prevents a single paste from
+// being inserted twice (once by CodeMirror, once by the menu command). Each
+// handler claims the operation via claimClipboardOp so that if the menu
+// command also runs for the same gesture it bails out instead of duplicating.
+const clipboardHandlers = Prec.highest(
+  EditorView.domEventHandlers({
+    copy: (event) => {
+      event.preventDefault();
+      if (claimClipboardOp()) getActiveEditorPort()?.copySelection();
+      return true;
+    },
+    cut: (event) => {
+      event.preventDefault();
+      if (claimClipboardOp()) getActiveEditorPort()?.cutSelection();
+      return true;
+    },
+    paste: (event) => {
+      event.preventDefault();
+      if (claimClipboardOp()) {
+        void (async () => {
+          const text = await navigator.clipboard.readText().catch(() => "");
+          getActiveEditorPort()?.paste(text);
+        })();
+      }
+      return true;
+    },
+  }),
+);
+
 function buildExtensions(
   settings: Settings,
   getBaseline: () => string | null,
@@ -279,6 +310,7 @@ function buildExtensions(
   });
 
   return [
+    clipboardHandlers,
     lineNumbersComp.of(settings.showLineNumbers ? lineNumbers() : []),
     history(),
     drawSelection(),
