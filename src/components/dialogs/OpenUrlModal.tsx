@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../lib/store";
 import { openFileFromUrl } from "../../lib/fileops";
 import { claimClipboardOp } from "../../lib/editorPort";
-import { pasteTextIntoNativeEditable } from "../../lib/appCommands";
+import { snapshotEditable, insertIntoEditable } from "../../lib/appCommands";
 
 export default function OpenUrlModal() {
   const setOpen = useStore((s) => s.setOpenUrlOpen);
@@ -46,12 +46,13 @@ export default function OpenUrlModal() {
             // handlers) — this keeps the URL from being inserted twice.
             onPaste={(e) => {
               e.preventDefault();
-              if (claimClipboardOp()) {
-                void navigator.clipboard
-                  .readText()
-                  .catch(() => "")
-                  .then((text) => pasteTextIntoNativeEditable(text));
-              }
+              const snap = snapshotEditable(e.currentTarget as HTMLInputElement);
+              if (!snap) return;
+              if (!claimClipboardOp()) return;
+              void navigator.clipboard
+                .readText()
+                .catch(() => "")
+                .then((text) => insertIntoEditable(snap, text));
             }}
             onKeyDown={(e) => e.key === "Enter" && void open()}
           />

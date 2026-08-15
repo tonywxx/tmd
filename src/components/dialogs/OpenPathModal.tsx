@@ -4,7 +4,7 @@ import { getFileSystem } from "../../lib/fs";
 import { openFileByPath } from "../../lib/fileops";
 import { executeCommand } from "../../lib/commands";
 import { claimClipboardOp } from "../../lib/editorPort";
-import { pasteTextIntoNativeEditable } from "../../lib/appCommands";
+import { snapshotEditable, insertIntoEditable } from "../../lib/appCommands";
 
 export default function OpenPathModal() {
   const setOpen = useStore((s) => s.setOpenPathOpen);
@@ -61,12 +61,13 @@ export default function OpenPathModal() {
             // path text is never inserted twice.
             onPaste={(e) => {
               e.preventDefault();
-              if (claimClipboardOp()) {
-                void navigator.clipboard
-                  .readText()
-                  .catch(() => "")
-                  .then((text) => pasteTextIntoNativeEditable(text));
-              }
+              const snap = snapshotEditable(e.currentTarget as HTMLInputElement);
+              if (!snap) return;
+              if (!claimClipboardOp()) return;
+              void navigator.clipboard
+                .readText()
+                .catch(() => "")
+                .then((text) => insertIntoEditable(snap, text));
             }}
             onKeyDown={(e) => e.key === "Enter" && open()}
           />

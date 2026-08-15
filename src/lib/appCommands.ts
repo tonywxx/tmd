@@ -61,19 +61,43 @@ function syncControlledInput(el: HTMLInputElement | HTMLTextAreaElement): void {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-// Insert text at the current selection of the focused native input/textarea,
-// then sync React state (controlled inputs ignore raw DOM edits otherwise).
-// Shared by the ⌘V menu command and the dialogs' onPaste handlers so every
-// paste path inserts identically. Returns false when no native editable is
-// focused so callers can fall back to the editor port.
-export function pasteTextIntoNativeEditable(text: string): boolean {
-  const el = activeNativeEditable();
-  if (!el) return false;
-  const s = el.selectionStart ?? el.value.length;
-  const e = el.selectionEnd ?? el.value.length;
-  el.setRangeText(text, s, e, "end");
+// Snapshot of a native <input>/<textarea> taken synchronously when a paste is
+// claimed. The clipboard read is async, and on some platforms the native paste
+// default action still fires despite preventDefault (moving the caret/inserting
+// text). Reconstructing the value from this snapshot — instead of the live
+// value and selection at insert time — guarantees one gesture inserts once.
+export interface EditableSnapshot {
+  el: HTMLInputElement | HTMLTextAreaElement;
+  before: string;
+  start: number;
+  end: number;
+}
+
+export function snapshotEditable(
+  el?: HTMLInputElement | HTMLTextAreaElement | null,
+): EditableSnapshot | null {
+  const target = el ?? activeNativeEditable();
+  if (!target) return null;
+  return {
+    el: target,
+    before: target.value,
+    start: target.selectionStart ?? target.value.length,
+    end: target.selectionEnd ?? target.value.length,
+  };
+}
+
+// Insert `text` into the editable described by `snap`, replacing the snapshot's
+// original [start, end) range, then sync React state (controlled inputs ignore
+// raw DOM edits otherwise). The value is written via setRangeText (not a direct
+// `el.value = …`) so React's value tracker isn't updated out-of-band: otherwise
+// the re-dispatched `input` event looks like a no-op and onChange never fires,
+// leaving the controlled input's state stale (e.g. Open stays disabled).
+export function insertIntoEditable(snap: EditableSnapshot, text: string): void {
+  const { el, before, start, end } = snap;
+  const next = before.slice(0, start) + text + before.slice(end);
+  el.setRangeText(next, 0, el.value.length, "end");
+  el.setSelectionRange(start + text.length, start + text.length);
   syncControlledInput(el);
-  return true;
 }
 
 // True when the current DOM text selection lives inside a CodeMirror editor.
@@ -169,8 +193,12 @@ export function registerAppCommands(): void {
     if (pasteGestureActive()) return;
     markPasteGesture();
     if (!claimClipboardOp()) return;
+    const snap = snapshotEditable();
     const text = await navigator.clipboard.readText().catch(() => "");
-    if (pasteTextIntoNativeEditable(text)) return;
+    if (snap) {
+      insertIntoEditable(snap, text);
+      return;
+    }
     getActiveEditorPort()?.paste(text);
   });
   registerCommand("select-all", () => getActiveEditorPort()?.selectAll());
