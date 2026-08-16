@@ -11,3 +11,4 @@ The five canonical triage roles map to GitHub labels named after them. See `docs
 ### Domain docs
 
 Single-context layout: one `CONTEXT.md` plus `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
