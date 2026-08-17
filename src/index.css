@@ -616,6 +616,38 @@ body {
 .markdown-body ol li {
   margin: 0.2em 0;
 }
+.markdown-body sup a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.markdown-body .footnotes {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--border);
+  font-size: 0.9em;
+  color: var(--text-dim);
+}
+.markdown-body .footnotes ol {
+  padding-left: 1.4em;
+}
+.markdown-body .footnotes li {
+  margin: 0.3em 0;
+}
+/* Standard screen-reader-only utility, used by the footnote "Footnotes"
+ * heading (and any other hidden heading in the app or rendered markdown) so it
+ * stays accessible but visually hidden like on GitHub. Global so it works
+ * wherever a hidden heading appears, not just inside the preview. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* ---------- Focus mode ---------- */
 .focus-mode .file-browser,

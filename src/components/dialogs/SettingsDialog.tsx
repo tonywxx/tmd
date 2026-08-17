@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useStore } from "../../lib/store";
-import { api } from "../../lib/bridge";
+import { getBackend } from "../../lib/backend";
 import {
   ACCENTS,
   AUTO_SAVE_OPTIONS,
@@ -30,9 +30,9 @@ export default function SettingsDialog() {
     updateSettings(p);
     const next = useStore.getState().settings;
     try {
-      await api.setSettings(next);
+      await getBackend().setSettings(next);
       if (GLOBAL_HOTKEY_KEYS.some((k) => k in p)) {
-        await api.updateGlobalHotkey(next);
+        await getBackend().updateGlobalHotkey(next);
       }
     } catch (e) {
       useStore.getState().pushToast(`Could not save settings: ${String(e)}`, "error");
@@ -47,8 +47,8 @@ export default function SettingsDialog() {
     const prev = snapshot.current;
     updateSettings(prev);
     try {
-      await api.setSettings(prev);
-      await api.updateGlobalHotkey(prev);
+      await getBackend().setSettings(prev);
+      await getBackend().updateGlobalHotkey(prev);
     } catch {
       /* ignore revert failures */
     }

@@ -17,39 +17,10 @@ import { confirmDialog, messageDialog } from "../lib/bridge";
 import { getFileSystem } from "../lib/fs";
 import { openFileByPath } from "../lib/fileops";
 import { basename, dirname, join } from "../lib/pathutil";
-import { favEq, type Favorite, type FileEntry, type SortMode } from "../lib/types";
+import { type Favorite, type FileEntry, type SortMode } from "../lib/types";
+import { sortEntries, SORT_LABELS, isFavorite } from "../lib/fileBrowserModel";
 import { formatRelativeTime } from "../lib/formatTime";
 import UpdateStatus from "./UpdateStatus";
-
-const SORT_LABELS: Record<SortMode, string> = {
-  name: "Name",
-  "modified-desc": "Modified (newest)",
-  "modified-asc": "Modified (oldest)",
-  "created-desc": "Created (newest)",
-  "created-asc": "Created (oldest)",
-};
-
-function sortEntries(entries: FileEntry[], mode: SortMode): FileEntry[] {
-  const arr = [...entries];
-  arr.sort((a, b) => {
-    if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-    switch (mode) {
-      case "name":
-        return a.name.localeCompare(b.name, undefined, { numeric: true });
-      case "modified-desc":
-        return b.modifiedTime - a.modifiedTime;
-      case "modified-asc":
-        return a.modifiedTime - b.modifiedTime;
-      case "created-desc":
-        return b.createdTime - a.createdTime;
-      case "created-asc":
-        return a.createdTime - b.createdTime;
-      default:
-        return 0;
-    }
-  });
-  return arr;
-}
 
 export default function FileBrowser() {
   const folderPath = useStore((s) => s.folderPath);
@@ -388,7 +359,7 @@ export default function FileBrowser() {
           x={contextMenu.x}
           y={contextMenu.y}
           isDir={contextMenu.isDir}
-          isFavorite={favorites.some((f) => favEq(f, { path: contextMenu.path, type: contextMenu.isDir ? "directory" : "file" }))}
+          isFavorite={isFavorite(favorites, contextMenu.path, contextMenu.isDir)}
           onClose={() => setContextMenu(null)}
           onAction={(a) => onContextAction(a, contextMenu.path, contextMenu.isDir)}
         />

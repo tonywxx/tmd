@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../lib/store";
 import { openFileFromUrl } from "../../lib/fileops";
 import { claimClipboardOp } from "../../lib/editorPort";
-import { snapshotEditable, insertIntoEditable } from "../../lib/appCommands";
+import { snapshotEditable, insertIntoEditable } from "../../lib/nativeInput";
 
 export default function OpenUrlModal() {
   const setOpen = useStore((s) => s.setOpenUrlOpen);

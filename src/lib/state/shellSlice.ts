@@ -1,7 +1,7 @@
 import type { StateCreator } from "zustand";
 import type { AppState, ShellSlice } from "./types";
 import { DEFAULT_SETTINGS } from "../constants";
-import { api } from "../bridge";
+import { getBackend } from "../backend";
 
 let toastSeq = 1;
 
@@ -62,7 +62,7 @@ export const createShellSlice: StateCreator<AppState, [], [], ShellSlice> = (
         },
       };
     });
-    void api.setSettings(get().settings);
+    void getBackend().setSettings(get().settings);
   },
   addRecentDirectory: (dir) => {
     set((state) => {
@@ -74,6 +74,6 @@ export const createShellSlice: StateCreator<AppState, [], [], ShellSlice> = (
         },
       };
     });
-    void api.setSettings(get().settings);
+    void getBackend().setSettings(get().settings);
   },
 });

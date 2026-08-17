@@ -1,7 +1,7 @@
 {
 	"name": "tmd",
 	"private": true,
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"type": "module",
 	"packageManager": "pnpm@11.21.0",
 	"scripts": {
@@ -29,8 +29,12 @@
 		"codemirror": "^6.0.2",
 		"diff": "^9.0.0",
 		"dompurify": "^3.4.13",
+		"highlight.js": "^11.12.0",
 		"lucide-react": "^1.31.0",
 		"marked": "^18.0.9",
+		"marked-footnote": "^1.4.0",
+		"marked-gfm-heading-id": "^4.1.4",
+		"marked-highlight": "^2.2.4",
 		"mermaid": "^11.16.1",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",

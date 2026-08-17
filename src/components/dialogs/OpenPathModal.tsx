@@ -4,7 +4,7 @@ import { getFileSystem } from "../../lib/fs";
 import { openFileByPath } from "../../lib/fileops";
 import { executeCommand } from "../../lib/commands";
 import { claimClipboardOp } from "../../lib/editorPort";
-import { snapshotEditable, insertIntoEditable } from "../../lib/appCommands";
+import { snapshotEditable, insertIntoEditable } from "../../lib/nativeInput";
 
 export default function OpenPathModal() {
   const setOpen = useStore((s) => s.setOpenPathOpen);
