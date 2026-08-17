@@ -388,6 +388,19 @@ async function openHelpFile() {
 }
 
 function handleDeepLink(arg: string) {
+  // macOS double-click / file association: a local file path arrives as a
+  // file:// URL. Open it directly (the deep-link plugin forwards these via
+  // RunEvent::Opened -> "deep-link://new-url").
+  if (arg.startsWith("file://")) {
+    let path = arg;
+    try {
+      path = new URL(arg).pathname;
+    } catch {
+      /* keep the raw value if it isn't a parseable URL */
+    }
+    void openFileByPath(path);
+    return;
+  }
   try {
     const u = new URL(arg);
     const path = u.searchParams.get("path");

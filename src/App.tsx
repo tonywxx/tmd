@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
 import WorkspaceToolbar from "./components/WorkspaceToolbar";
 import TabBar from "./components/TabBar";
 import Editor from "./components/Editor";
@@ -116,6 +116,18 @@ export default function App() {
           .catch(() => {});
       }, 4000);
       await restoreSession();
+      // Open files/links that launched a cold app (e.g. double-clicking a .md
+      // in Finder, or a tmd:// URL). Live opens while running are handled by
+      // onOpenUrl below; this catches the launch-time ones before that
+      // listener is registered.
+      try {
+        const launchUrls = (await getCurrent()) as string[] | null;
+        if (launchUrls) {
+          for (const u of launchUrls) void executeCommand("deep-link", u);
+        }
+      } catch {
+        /* deep link unsupported on this platform */
+      }
       // First-launch onboarding: generate + open the markdown help guide once.
       if (!localStorage.getItem("tmd_help_auto_opened")) {
         localStorage.setItem("tmd_help_auto_opened", "1");
