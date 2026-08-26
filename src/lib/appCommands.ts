@@ -1,5 +1,4 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useStore } from "./store";
 import { getBackend } from "./backend";
 import { getActiveEditorPort } from "./editorPort";
@@ -40,6 +39,12 @@ import {
 // (./documentIO), so this module stays pure event→command wiring.
 
 let currentZoom = 1;
+
+// The webview's native setZoom() was a no-op in some builds, so we scale the
+// whole app by zooming the document root instead — crisp text, reflows layout.
+function applyAppZoom(): void {
+  document.documentElement.style.zoom = String(currentZoom);
+}
 
 export function registerAppCommands(): void {
   // ---- documents ----
@@ -161,15 +166,15 @@ export function registerAppCommands(): void {
   });
   registerCommand("reset-zoom", () => {
     currentZoom = 1;
-    void getCurrentWebviewWindow().setZoom(1);
+    applyAppZoom();
   });
   registerCommand("zoom-in", () => {
     currentZoom = Math.min(3, Math.round((currentZoom + 0.1) * 10) / 10);
-    void getCurrentWebviewWindow().setZoom(currentZoom);
+    applyAppZoom();
   });
   registerCommand("zoom-out", () => {
     currentZoom = Math.max(0.5, Math.round((currentZoom - 0.1) * 10) / 10);
-    void getCurrentWebviewWindow().setZoom(currentZoom);
+    applyAppZoom();
   });
 
   // ---- app shell ----

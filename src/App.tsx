@@ -192,6 +192,28 @@ export default function App() {
     root.style.setProperty("--accent", ACCENT_COLORS[settings.accentColor]);
   }, [settings.theme, settings.accentColor]);
 
+  // ---- app-text zoom shortcuts: Cmd/Ctrl + "+"/"=" zoom in, "-" zoom out,
+  // "0" resets. Handled at the window level (capture) so it works regardless
+  // of focus, including inside the editor. The native menu accelerators are
+  // intentionally left empty to avoid double-triggering the same command. ----
+  useEffect(() => {
+    const onZoomKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        void executeCommand("zoom-in");
+      } else if (e.key === "-") {
+        e.preventDefault();
+        void executeCommand("zoom-out");
+      } else if (e.key === "0") {
+        e.preventDefault();
+        void executeCommand("reset-zoom");
+      }
+    };
+    window.addEventListener("keydown", onZoomKey, { capture: true });
+    return () => window.removeEventListener("keydown", onZoomKey, { capture: true });
+  }, []);
+
   async function restoreSession() {
     try {
       const label = getCurrentWindow().label;
@@ -332,7 +354,23 @@ export default function App() {
           {!focusMode && <TabBar />}
           <WorkspaceToolbar />
           <div className="workspace" ref={workspaceRef}>
-            {viewMode === "preview" ? (
+            {/* Focus Mode is a distraction-free editor+preview split (ADR-0004):
+             * always show both panes so the rendered diagram is visible even
+             * when the underlying view mode is "code". */}
+            {focusMode ? (
+              <>
+                <div
+                  className="editor-col split"
+                  style={{ flexBasis: `${editorPct * 100}%` }}
+                >
+                  <Editor />
+                </div>
+                <div className="splitter" onMouseDown={startSplitDrag} title="Resize" />
+                <div className="preview-col">
+                  <Preview />
+                </div>
+              </>
+            ) : viewMode === "preview" ? (
               <div className="preview-col">
                 <Preview />
               </div>

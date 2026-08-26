@@ -39,6 +39,7 @@
 - [Usage Examples](#usage-examples)
 - [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
+- [Changelog](#changelog)
 - [License](#license)
 
 ---
@@ -446,6 +447,12 @@ bypassing the Tauri CLI.
 tmd needs a WindowServer to render its UI. On a headless CI machine `pnpm tauri
 dev` will build but show nothing. Run it on a desktop Mac (or any environment
 with a display) to see the window.
+
+---
+
+## Changelog
+
+Full release history in both English and 中文: [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 
