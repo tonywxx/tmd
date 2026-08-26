@@ -6,7 +6,7 @@ release first. Version tags follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [v0.2.6] - 2026-08-26
+## [v0.2.7] - 2026-08-26
 
 - Updated `syn` from 3.0.3 to 3.0.4 and other dependencies in `Cargo.lock`.
 - Bump version in `Cargo.toml` and `tauri.conf.json` to 0.2.6.
@@ -15,7 +15,7 @@ release first. Version tags follow [Semantic Versioning](https://semver.org/).
 - Enhance focus mode in the editor to always show both editor and preview.
 - Update settings dialog for better user experience and layout.
 - Clean up CSS for focus mode styling.
-- Add changelog to document changes and updates.
+- Integrate clipboard manager plugin
 ---
 
 ## [v0.2.4] - 2026-08-16

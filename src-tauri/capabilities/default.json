@@ -33,6 +33,7 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-set-fullscreen",
     "core:webview:allow-print",
+    "clipboard-manager:allow-read-text",
     "opener:default",
     "dialog:default",
     "updater:default",
