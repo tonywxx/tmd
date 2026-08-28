@@ -2,11 +2,27 @@ import { useEffect, useRef } from "react";
 import { useStore } from "../lib/store";
 import { api } from "../lib/bridge";
 import { getFileSystem } from "../lib/fs";
-import { renderMarkdown } from "../lib/markdown";
-import { renderMermaidBlocks } from "../lib/mermaidFigure";
 import { scrollSync } from "../lib/scrollSync";
 import { PREVIEW_DEBOUNCE_MS } from "../lib/constants";
-import { basename } from "../lib/pathutil";
+import {
+  createPreviewPipeline,
+  makeImageResolutionStage,
+  makeMermaidStage,
+} from "../lib/previewPipeline";
+
+// One render pipeline adapter for the preview pane: markdown → image
+// resolution → mermaid. Stages are declarative, so future transforms (TOC
+// injection, link rewriting) slot in here without changing this component.
+const previewPipeline = createPreviewPipeline([
+  makeImageResolutionStage(async (src, baseDir) => {
+    const fs = getFileSystem();
+    const resolved = baseDir ? await fs.resolvePath(src, baseDir) : null;
+    const path = resolved?.path ?? src;
+    if (!(await fs.isImageAllowed(path))) return null;
+    return fs.imageDataUri(path);
+  }),
+  makeMermaidStage(),
+]);
 
 export default function Preview() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -15,8 +31,6 @@ export default function Preview() {
   const settings = useStore((s) => s.settings);
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
 
-  const html = activeTab ? renderMarkdown(activeTab.content) : "";
-
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -24,52 +38,25 @@ export default function Preview() {
     return () => scrollSync.unregisterPreview();
   }, [activeTabId]);
 
-  // Resolve local images to base64 data URIs (security: no custom protocol).
+  // Run the render pipeline whenever content, the file's base dir, or the theme
+  // (mermaid follows dark mode) changes. The pipeline owns the preview DOM, so
+  // the component no longer uses dangerouslySetInnerHTML.
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !activeTab) return;
     let cancelled = false;
-    const imgs = Array.from(el.querySelectorAll("img")) as HTMLImageElement[];
-    const dir = activeTab?.filePath ? basename(activeTab.filePath, true) : null;
-    imgs.forEach(async (img) => {
-      const src = img.getAttribute("src") || "";
-      if (!src || /^https?:\/\//.test(src) || src.startsWith("data:")) return;
-      try {
-        const fs = getFileSystem();
-        const resolved = dir ? await fs.resolvePath(src, dir) : null;
-        const path = resolved?.path ?? src;
-        if (!(await fs.isImageAllowed(path))) return;
-        const dataUri = await fs.imageDataUri(path);
-        if (dataUri && !cancelled) img.src = dataUri;
-      } catch {
-        /* ignore unresolvable images */
-      }
-    });
+    void previewPipeline
+      .render(el, activeTab.content, { filePath: activeTab.filePath })
+      .catch((err) => {
+        if (!cancelled) console.error("preview render failed", err);
+      });
     return () => {
       cancelled = true;
     };
-  }, [html, activeTab?.filePath]);
-
-  // Render ```mermaid code blocks as interactive diagrams. Re-runs when the
-  // content changes or when the theme toggles (so diagrams follow dark mode).
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    let cancelled = false;
-    void renderMermaidBlocks(el).catch((err) => {
-      if (!cancelled) console.error("mermaid render failed", err);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [html, settings.theme]);
+  }, [activeTab?.content, activeTab?.filePath, settings.theme]);
 
   if (!activeTab) {
-    return (
-      <>
-        <div className="preview-empty" />
-      </>
-    );
+    return <div className="preview-empty" />;
   }
 
   const font =
@@ -78,15 +65,12 @@ export default function Preview() {
       : settings.previewFontFamily;
 
   return (
-    <>
-      <div
-        className={"preview markdown-body theme-" + settings.markdownTheme}
-        ref={containerRef}
-        style={{ fontFamily: font }}
-        onClick={onPreviewClick}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </>
+    <div
+      className={"preview markdown-body theme-" + settings.markdownTheme}
+      ref={containerRef}
+      style={{ fontFamily: font }}
+      onClick={onPreviewClick}
+    />
   );
 }
 

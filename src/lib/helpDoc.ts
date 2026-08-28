@@ -176,6 +176,25 @@ Press <kbd>⌘</kbd> + <kbd>S</kbd> to save.
 
 ---
 
+## Alerts
+
+> [!NOTE]
+> Useful information that users should know, even when skimming.
+
+> [!TIP]
+> Helpful advice for a smoother experience.
+
+> [!IMPORTANT]
+> Key detail users must be warned about.
+
+> [!WARNING]
+> Urgent info needed to avoid problems.
+
+> [!CAUTION]
+> Action with a high risk of something going wrong.
+
+---
+
 ## HTML passthrough
 
 <div style="padding:8px;border:1px solid #888;border-radius:6px">

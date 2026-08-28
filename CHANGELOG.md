@@ -5,6 +5,10 @@ release first. Version tags follow [Semantic Versioning](https://semver.org/).
 本项目所有重要变更均在此以英文与中文双语记录，最新版本在前。版本号遵循语义化版本规范。
 
 ---
+## [v0.2.9] - 2026-08-28
+
+- Implement markdown alert features
+
 ## [v0.2.8] - 2026-08-27
 
 - Added support for multiple markdown themes with a new settings option and corresponding CSS.

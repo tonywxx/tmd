@@ -457,3 +457,31 @@
   overflow-y: hidden;
   padding: 0.4em 0;
 }
+
+/* ---------- GitHub-style alerts ----------
+ * Emitted by markdownExtensions.ts from `> [!NOTE]`-style blockquotes. */
+.markdown-body .markdown-alert {
+  margin: 1rem 0;
+  padding: 0.6rem 1rem;
+  border-left: 4px solid var(--md-border);
+  border-radius: 6px;
+  background: var(--md-code-bg);
+}
+.markdown-body .markdown-alert > :first-child { margin-top: 0; }
+.markdown-body .markdown-alert > :last-child { margin-bottom: 0; }
+.markdown-body .markdown-alert-title {
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+}
+.markdown-body .markdown-alert-note { border-left-color: #4493f8; }
+.markdown-body .markdown-alert-tip { border-left-color: #3fb950; }
+.markdown-body .markdown-alert-important { border-left-color: #a371f7; }
+.markdown-body .markdown-alert-warning { border-left-color: #d29922; }
+.markdown-body .markdown-alert-caution { border-left-color: #f85149; }
+
+/* ---------- Highlight / marked text (==x==) ---------- */
+.markdown-body mark {
+  background: color-mix(in srgb, var(--md-accent) 35%, transparent);
+  padding: 0.05em 0.2em;
+  border-radius: 3px;
+}
