@@ -1,13 +1,16 @@
 import { useRef } from "react";
+import { useMemo } from "react";
 import { getBackend } from "../../lib/backend";
 import {
 	ACCENTS,
 	AUTO_SAVE_OPTIONS,
 	EDITOR_FONT_OPTIONS,
 	FONT_SIZE_OPTIONS,
+	MARKDOWN_THEMES,
 	PREVIEW_FONT_OPTIONS,
 } from "../../lib/constants";
 import { useStore } from "../../lib/store";
+import { renderMarkdown } from "../../lib/markdown";
 import type { AccentColor, Settings, Theme } from "../../lib/types";
 
 const GLOBAL_HOTKEY_KEYS: (keyof Settings)[] = [
@@ -19,6 +22,34 @@ export default function SettingsDialog() {
 	const settings = useStore((s) => s.settings);
 	const setSettingsOpen = useStore((s) => s.setSettingsOpen);
 	const updateSettings = useStore((s) => s.updateSettings);
+
+	// Sample document for the live markdown-theme preview.
+	const previewHtml = useMemo(
+		() =>
+			renderMarkdown(
+				[
+					"# Heading One",
+					"",
+					"A paragraph with **bold**, *italic*, and a [link](https://example.com).",
+					"",
+					"## Heading Two",
+					"",
+					"- First item",
+					"- Second item",
+					"",
+					"> A blockquote that spans a line or two.",
+					"",
+					"```js",
+					"const x = 42;",
+					"```",
+					"",
+					"| A | B |",
+					"|---|---|",
+					"| 1 | 2 |",
+				].join("\n"),
+			),
+		[],
+	);
 
 	// Snapshot taken when the dialog opens so Cancel can revert live changes
 	// (which are already persisted as the user makes them).
@@ -128,6 +159,28 @@ export default function SettingsDialog() {
 								</option>
 							))}
 						</select>
+
+						<label>Markdown Theme</label>
+						<select
+							value={settings.markdownTheme}
+							onChange={(e) =>
+								apply({ markdownTheme: e.target.value as Settings["markdownTheme"] })
+							}
+						>
+							{MARKDOWN_THEMES.map((t) => (
+								<option key={t.value} value={t.value}>
+									{t.label}
+								</option>
+							))}
+						</select>
+
+						<label>Theme Preview</label>
+						<div className="md-theme-preview">
+							<div
+								className={"markdown-body theme-" + settings.markdownTheme}
+								dangerouslySetInnerHTML={{ __html: previewHtml }}
+							/>
+						</div>
 
 						<label className="checkbox">
 							<input

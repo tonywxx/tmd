@@ -1,6 +1,25 @@
 // Domain model for tmd — mirrors the Rust `types.rs`.
 
 export type Theme = "system" | "dark" | "light";
+
+// Visual styles for the rendered markdown preview. "github" follows the app's
+// light/dark chrome; the rest restyle the preview independently.
+export type MarkdownTheme =
+  | "github"
+  | "academic"
+  | "minimal"
+  | "typewriter"
+  | "newsprint"
+  | "solarized"
+  | "catppuccin"
+  | "nord"
+  | "dracula"
+  | "gruvbox"
+  | "ayu"
+  | "tokyo-night"
+  | "gitlab"
+  | "notion"
+  | "medium";
 export type AccentColor =
   | "blue"
   | "purple"
@@ -36,6 +55,7 @@ export interface WindowBounds {
 
 export interface Settings {
   theme: Theme;
+  markdownTheme: MarkdownTheme;
   accentColor: AccentColor;
   fontSize: number;
   fontFamily: string;

@@ -78,6 +78,7 @@ fn merge_settings(existing: Settings) -> Settings {
     let d = Settings::default();
     Settings {
         theme: if existing.theme.is_empty() { d.theme } else { existing.theme },
+        markdown_theme: if existing.markdown_theme.is_empty() { d.markdown_theme } else { existing.markdown_theme },
         accent_color: if existing.accent_color.is_empty() { d.accent_color } else { existing.accent_color },
         font_size: if existing.font_size == 0 { d.font_size } else { existing.font_size },
         font_family: if existing.font_family.is_empty() { d.font_family } else { existing.font_family },

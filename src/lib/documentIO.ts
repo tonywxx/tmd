@@ -10,6 +10,10 @@ import { renderMarkdown } from "./markdown";
 import { dirname, join } from "./pathutil";
 import { executeCommand } from "./commands";
 import { HELP_FILE_NAME, HELP_MD } from "./helpDoc";
+import type { Theme } from "./types";
+// Standalone markdown-theme stylesheet, inlined into exported HTML so the
+// document carries its chosen theme without depending on the app.
+import markdownThemesCss from "./markdown-themes.css?raw";
 
 // ---- Tab I/O module ----
 //
@@ -75,9 +79,16 @@ async function exportHtml() {
   const tab = st.getActiveTab();
   if (!tab) return;
   const html = renderMarkdown(tab.content);
-  const full = `<!doctype html><html><head><meta charset="utf-8"><title>${
-    tab.name ?? "document"
-  }</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;max-width:720px;margin:40px auto;padding:0 20px;line-height:1.6}pre{background:#f5f5f7;padding:12px 14px;border-radius:6px;overflow-x:auto}code{font-family:'SF Mono',Menlo,monospace}img{max-width:100%}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px 10px}</style></head><body class="markdown-body">${html}</body></html>`;
+  const dark = resolveDark(st.settings.theme);
+  const title = escapeHtml(tab.name ?? "document");
+  const full = `<!doctype html><html lang="en" data-theme="${
+    dark ? "dark" : "light"
+  }"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>
+${CHROME_VARS}
+html,body{margin:0;padding:0}
+.md-export-col{max-width:780px;margin:0 auto;padding:40px 48px;min-height:100vh;box-sizing:border-box}
+${markdownThemesCss}
+</style></head><body class="markdown-body theme-${st.settings.markdownTheme}"><div class="md-export-col">${html}</div></body></html>`;
   const def = tab.filePath ? tab.filePath.replace(/\.md$/i, ".html") : "document.html";
   const p = await pickSavePath(def);
   if (p) {
@@ -89,6 +100,30 @@ async function exportHtml() {
     }
   }
 }
+
+// Resolve the effective light/dark mode for export (system follows the OS).
+function resolveDark(theme: Theme): boolean {
+  if (theme === "dark") return true;
+  if (theme === "light") return false;
+  return (
+    typeof window !== "undefined" &&
+    !!window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// App chrome variables so the "github" theme (which falls back to them) renders
+// correctly outside the app, with light + dark variants selected by data-theme.
+const CHROME_VARS = `:root{--bg:#f5f5f7;--border:#d8d8de;--code-bg:#ececf0;--accent:#3b82f6;--text:#1d1f24;--text-dim:#6b7280;--preview-font:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+:root[data-theme="dark"]{--bg:#1a1d23;--border:#333a45;--code-bg:#2a2f39;--accent:#3b82f6;--text:#d4d7de;--text-dim:#8b93a3;--preview-font:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}`;
 
 // Create (if missing) and open the markdown feature guide in the user's home
 // directory. Clicking Help again just focuses the existing file.

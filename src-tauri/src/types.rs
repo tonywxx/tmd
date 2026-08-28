@@ -51,6 +51,7 @@ pub struct SearchFileResult {
 #[serde(default)]
 pub struct Settings {
     pub theme: String,
+    pub markdown_theme: String,
     pub accent_color: String,
     pub font_size: u32,
     pub font_family: String,
@@ -76,6 +77,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             theme: "system".into(),
+            markdown_theme: "github".into(),
             accent_color: "blue".into(),
             font_size: 14,
             font_family: "default".into(),

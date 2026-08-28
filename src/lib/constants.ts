@@ -1,4 +1,4 @@
-import type { AccentColor, Settings } from "./types";
+import type { AccentColor, MarkdownTheme, Settings } from "./types";
 
 // ---- Timings ----
 export const SYNC_COOLDOWN_MS = 80; // scroll-sync feedback guard
@@ -70,8 +70,27 @@ export function isImage(path: string): boolean {
   return IMAGE_EXTS.some((e) => lower.endsWith(e));
 }
 
+export const MARKDOWN_THEMES: { label: string; value: MarkdownTheme }[] = [
+  { label: "GitHub", value: "github" },
+  { label: "Academic", value: "academic" },
+  { label: "Minimal", value: "minimal" },
+  { label: "Typewriter", value: "typewriter" },
+  { label: "Newsprint", value: "newsprint" },
+  { label: "Solarized", value: "solarized" },
+  { label: "Catppuccin", value: "catppuccin" },
+  { label: "Nord", value: "nord" },
+  { label: "Dracula", value: "dracula" },
+  { label: "Gruvbox", value: "gruvbox" },
+  { label: "Ayu", value: "ayu" },
+  { label: "Tokyo Night", value: "tokyo-night" },
+  { label: "GitLab", value: "gitlab" },
+  { label: "Notion", value: "notion" },
+  { label: "Medium", value: "medium" },
+];
+
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
+  markdownTheme: "github",
   accentColor: "blue",
   fontSize: 14,
   fontFamily: "default",

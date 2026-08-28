@@ -45,7 +45,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key>
   <string>tmd</string>
   <key>CFBundleIdentifier</key>
-  <string>bid.adaq.tmd</string>
+  <string>cc.adabet.tmd</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>

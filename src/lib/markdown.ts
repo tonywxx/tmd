@@ -5,6 +5,7 @@ import { gfmHeadingId } from "marked-gfm-heading-id";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 import markedFootnote from "marked-footnote";
+import markedKatex from "marked-katex-extension";
 
 marked.setOptions({
   gfm: true,
@@ -29,7 +30,19 @@ marked.use(
 // GFM footnotes: `[^1]` references and `[^1]:` definitions.
 marked.use(markedFootnote());
 
-// Keep task-list checkboxes, heading ids, and basic formatting.
+// Math: `$inline$` and `$$block$$` rendered via KaTeX. We emit MathML so the
+// output needs no font assets and renders identically in the preview and in
+// exported HTML/PDF. throwOnError keeps a bad formula visible (red) instead of
+// crashing the whole render.
+marked.use(
+  markedKatex({
+    throwOnError: false,
+    output: "mathml",
+  })
+);
+
+// Keep task-list checkboxes, heading ids, and basic formatting. MathML tags
+// are part of DOMPurify's default allowlist, so KaTeX output survives intact.
 const SANITIZE_CONFIG = {
   ADD_ATTR: ["target", "rel", "checked", "disabled", "type", "id"],
   ADD_TAGS: ["input"],

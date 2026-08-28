@@ -84,7 +84,7 @@
 ### Multi-Window
 
 - **⌘⇧N opens a new window**, each with an independent session (tab set + current folder).
-- Window position and size persist under `~/Library/Application Support/bid.adaq.tmd/` (macOS), `~/.local/share/bid.adaq.tmd/` (Linux), or `%APPDATA%/bid.adaq.tmd/` (Windows).
+- Window position and size persist under `~/Library/Application Support/cc.adabet.tmd/` (macOS), `~/.local/share/cc.adabet.tmd/` (Linux), or `%APPDATA%/cc.adabet.tmd/` (Windows).
 
 ### Three-Way Merge (DiffView)
 
@@ -257,9 +257,9 @@ Output: `src-tauri/target/release/bundle/macos/tmd.app`.
 
 Open **Settings** from the menu or the gear icon at the top-right of the toolbar. Every change applies immediately (the UI reacts and the file is written at once); **Cancel** reverts everything back to the state the dialog had when it opened, and **Done** just closes it. Settings are persisted to:
 
-- macOS: `~/Library/Application Support/bid.adaq.tmd/settings.json`
-- Linux: `~/.local/share/bid.adaq.tmd/settings.json`
-- Windows: `%APPDATA%/bid.adaq.tmd/settings.json`
+- macOS: `~/Library/Application Support/cc.adabet.tmd/settings.json`
+- Linux: `~/.local/share/cc.adabet.tmd/settings.json`
+- Windows: `%APPDATA%/cc.adabet.tmd/settings.json`
 
 Session state is persisted separately per window label (`main`, `main-2`, …).
 

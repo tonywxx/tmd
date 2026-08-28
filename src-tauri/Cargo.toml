@@ -3,7 +3,7 @@ authors = ["tony"]
 description = "TONy Markdown App"
 edition = "2021"
 name = "tmd"
-version = "0.2.7"
+version = "0.2.8"
 
 [lib]
 crate-type = ["staticlib", "cdylib", "rlib"]

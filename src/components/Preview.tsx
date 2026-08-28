@@ -80,7 +80,7 @@ export default function Preview() {
   return (
     <>
       <div
-        className="preview markdown-body"
+        className={"preview markdown-body theme-" + settings.markdownTheme}
         ref={containerRef}
         style={{ fontFamily: font }}
         onClick={onPreviewClick}
