@@ -5,6 +5,30 @@ release first. Version tags follow [Semantic Versioning](https://semver.org/).
 本项目所有重要变更均在此以英文与中文双语记录，最新版本在前。版本号遵循语义化版本规范。
 
 ---
+## [v0.3.0] - 2026-08-28
+
+feat: Refactor file browser to support openable file types and improve user experience
+
+- Introduced a new concept of "openable" files, allowing .json, .toml, and .yaml files to be opened alongside markdown files.
+- Updated file browser to open files with a single click, while directories still toggle on click.
+- Implemented a revealPath function to expand directory trees to show selected files without re-rooting the file browser.
+- Enhanced user feedback by displaying toasts for files that exceed the maximum size limit when opened.
+- Improved styling for openable files in the file browser, including visual indicators for markdown files.
+- Updated various components and styles to accommodate the new openable file logic and ensure consistent behavior across the application.
+- Added documentation for the new file handling approach and the distinction between openable and markdown file types.
+- File browser is now always rooted at `~` and no longer re-roots or expands
+  when a file is opened; a single click opens a file (double click no longer
+  required).
+- Markdown file names are highlighted in the browser so openable rows stand out.
+- The editor can open `.json`, `.toml`, `.yaml` and `.yml` in addition to
+  markdown: they get a language-matched syntax mode and a plain-text preview.
+- The browser hides `node_modules`, `.git` and build output directories.
+- The editor now follows the selected markdown theme's palette instead of the
+  app chrome, so the editor and preview share one color scheme.
+- Fixed the editor losing focus after the first keystroke: typing no longer
+  rebuilds the editor view, so the caret stays put and the editor keeps focus.
+
+
 ## [v0.2.9] - 2026-08-28
 
 - Implement markdown alert features

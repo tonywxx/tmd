@@ -51,6 +51,17 @@ fn spawn_main_window(app: &AppHandle, label: &str) {
     .build();
 }
 
+// Bring the main window back on screen. Closing it hides it rather than
+// destroying it (see the CloseRequested handler), so this restores the whole
+// editing session — tabs, unsaved buffers and all — instead of reloading.
+fn show_main_window(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+}
+
 fn build_menu(app: &AppHandle, recent: Vec<String>) -> tauri::menu::Menu<tauri::Wry> {
     use tauri::menu::{IsMenuItem, PredefinedMenuItem};
 
@@ -245,6 +256,9 @@ pub(crate) fn update_global_hotkey(app: &AppHandle, settings: &Settings) -> Resu
     let app_clone = app.clone();
     app.global_shortcut()
         .on_shortcut(sc, move |_app, _shortcut, _event| {
+            // A closed main window is only hidden, so surface it first —
+            // otherwise the "Open from Path" dialog opens out of sight.
+            show_main_window(&app_clone);
             if let Some(w) = app_clone.get_webview_window("main") {
                 let _ = w.emit("open-from-path", ());
             }
@@ -263,6 +277,9 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             for arg in argv {
                 if arg.starts_with("tmd://") {
+                    // Same reasoning as the global hotkey: the window may only
+                    // be hidden, so bring it back before handing over the URL.
+                    show_main_window(app);
                     if let Some(w) = app.get_webview_window("main") {
                         let _ = w.emit("deep-link://tmd", arg);
                     }
@@ -388,7 +405,7 @@ pub fn run() {
     });
 
     builder = builder.on_window_event(|window, event| {
-        if let WindowEvent::CloseRequested { .. } = event {
+        if let WindowEvent::CloseRequested { api, .. } = event {
             let app = window.app_handle();
             let pos = window.outer_position().ok();
             let size = window.inner_size().ok();
@@ -403,10 +420,20 @@ pub fn run() {
                 });
                 state.store.set_settings(s);
             }
+            // macOS: the main window is hidden instead of destroyed so the
+            // process stays alive (the hidden `export` webview already keeps
+            // it alive) and a Dock click can bring the session back — see the
+            // Reopen handler below. Only the main window behaves this way;
+            // secondary windows really do close.
+            #[cfg(target_os = "macos")]
+            if window.label() == "main" {
+                api.prevent_close();
+                let _ = window.hide();
+            }
         }
     });
 
-    builder
+    let app = builder
         .invoke_handler(tauri::generate_handler![
             commands::read_file,
             commands::write_file,
@@ -449,6 +476,20 @@ pub fn run() {
             updater::download_update_cmd,
             updater::install_update_cmd,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app_handle, event| match event {
+        // Dock icon click (or reopen from Finder) while no window is on
+        // screen: bring the hidden main window back.
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Reopen {
+            has_visible_windows, ..
+        } => {
+            if !has_visible_windows {
+                show_main_window(&app_handle);
+            }
+        }
+        _ => {}
+    });
 }

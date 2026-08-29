@@ -1,6 +1,6 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import { isMarkdown } from "./constants";
+import { isOpenable } from "./constants";
 import { openFileByPath } from "./fileops";
 
 type Pane = "editor" | "preview";
@@ -58,12 +58,12 @@ export async function registerDragDrop(): Promise<UnlistenFn> {
     }
     // drop
     setHighlight(null);
-    const mdPaths = p.paths.filter(isMarkdown);
-    if (mdPaths.length === 0) return;
+    const openPaths = p.paths.filter(isOpenable);
+    if (openPaths.length === 0) return;
     // Open the file without forcing a view-mode change: the dropped file
     // becomes the active tab and is shown in whatever pane(s) are already
     // visible (code / preview / split), preserving the user's current layout.
-    void Promise.all(mdPaths.map((path) => openFileByPath(path)));
+    void Promise.all(openPaths.map((path) => openFileByPath(path)));
   });
   return unlisten;
 }

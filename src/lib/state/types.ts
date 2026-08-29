@@ -103,6 +103,11 @@ export interface FileBrowserSlice {
   setLoading: (path: string, loading: boolean) => void;
   loadDir: (path: string) => Promise<void>;
   refreshTree: () => Promise<void>;
+  /**
+   * Select `target`, expanding the tree down to it if it is not already
+   * visible. Explicit reveals only (launch restore, tab switch).
+   */
+  revealPath: (target: string) => Promise<void>;
 }
 
 export type AppState = ShellSlice & TabsSlice & FileBrowserSlice;

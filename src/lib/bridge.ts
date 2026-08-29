@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { ask, message as dialogMessage, save } from "@tauri-apps/plugin-dialog";
+import { OPENABLE_FILTER_EXTS } from "./constants";
 import type {
   FileEntry,
   FileStat,
@@ -63,7 +64,7 @@ export const api = {
 
 // ---- native dialogs ----
 const MD_FILTERS = [
-  { name: "Markdown", extensions: ["md", "markdown", "mdown", "mkd", "txt"] },
+  { name: "Markdown & text", extensions: OPENABLE_FILTER_EXTS },
   { name: "All Files", extensions: ["*"] },
 ];
 

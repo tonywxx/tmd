@@ -3,7 +3,14 @@
  * inlined into exported HTML/PDF by documentIO.ts. The base rules read a set
  * of --md-* local variables that fall back to the app chrome variables (so the
  * default "github" theme tracks light/dark). Each markdown theme below
- * overrides just the variables (and a few typographic rules) it needs. */
+ * overrides just the variables (and a few typographic rules) it needs.
+ *
+ * Theme palettes are keyed on `.theme-*` alone, not `.markdown-body.theme-*`,
+ * so any element can opt into a palette by carrying the class — the preview
+ * pane (`.preview.markdown-body.theme-x`) and the editor pane
+ * (`.editor-host.theme-x`) stay on one palette. Consumers outside
+ * `.markdown-body` must supply their own fallbacks, since the base
+ * `--md-*` → `--*` mapping lives on `.markdown-body`. */
 
 .markdown-body {
   --md-bg: var(--bg);
@@ -125,63 +132,63 @@
 /* ---------- Markdown themes (app chrome-following) ---------- */
 
 /* Academic — serif, justified, formal headings without rules. */
-.markdown-body.theme-academic {
+.theme-academic {
   --md-font: Charter, "Bitstream Charter", Georgia, "Times New Roman", serif;
   --md-link: #7c3aed;
 }
-.markdown-body.theme-academic h1,
-.markdown-body.theme-academic h2 {
+.theme-academic h1,
+.theme-academic h2 {
   border-bottom: none;
   color: #1f2937;
 }
-.markdown-body.theme-academic h1 {
+.theme-academic h1 {
   letter-spacing: -0.01em;
 }
-.markdown-body.theme-academic p,
-.markdown-body.theme-academic li,
-.markdown-body.theme-academic blockquote {
+.theme-academic p,
+.theme-academic li,
+.theme-academic blockquote {
   text-align: justify;
   hyphens: auto;
 }
 
 /* Minimal — airy sans, no heading rules, lighter weight. */
-.markdown-body.theme-minimal {
+.theme-minimal {
   line-height: 1.75;
   --md-border: rgba(128, 128, 128, 0.28);
 }
-.markdown-body.theme-minimal h1,
-.markdown-body.theme-minimal h2 {
+.theme-minimal h1,
+.theme-minimal h2 {
   border-bottom: none;
   font-weight: 700;
 }
-.markdown-body.theme-minimal h3,
-.markdown-body.theme-minimal h4 {
+.theme-minimal h3,
+.theme-minimal h4 {
   font-weight: 600;
   color: var(--md-text-dim);
 }
 
 /* Typewriter — monospace body, rule-less headings, letterspaced caps. */
-.markdown-body.theme-typewriter {
+.theme-typewriter {
   --md-font: "SF Mono", Menlo, Monaco, Consolas, monospace;
   --md-heading-font: var(--md-font);
   --md-border: rgba(128, 128, 128, 0.3);
   line-height: 1.7;
 }
-.markdown-body.theme-typewriter h1,
-.markdown-body.theme-typewriter h2,
-.markdown-body.theme-typewriter h3 {
+.theme-typewriter h1,
+.theme-typewriter h2,
+.theme-typewriter h3 {
   border-bottom: none;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 700;
 }
-.markdown-body.theme-typewriter h1 {
+.theme-typewriter h1 {
   border-bottom: 2px dashed var(--md-border);
 }
 
 /* Newsprint — classic book serif on warm paper; follows light/dark via
  * explicit warm palettes per mode. */
-.markdown-body.theme-newsprint {
+.theme-newsprint {
   --md-font: Georgia, "Times New Roman", "Iowan Old Style", serif;
   --md-link: #a0522d;
   --md-bg: #f7f1e3;
@@ -192,17 +199,17 @@
   --md-accent: #b5651d;
   line-height: 1.7;
 }
-.markdown-body.theme-newsprint h1,
-.markdown-body.theme-newsprint h2 {
+.theme-newsprint h1,
+.theme-newsprint h2 {
   border-bottom-color: var(--md-border);
   font-weight: 600;
 }
-.markdown-body.theme-newsprint p,
-.markdown-body.theme-newsprint li {
+.theme-newsprint p,
+.theme-newsprint li {
   text-align: justify;
   hyphens: auto;
 }
-:root[data-theme="dark"] .markdown-body.theme-newsprint {
+:root[data-theme="dark"] .theme-newsprint {
   --md-bg: #211d18;
   --md-text: #e7dcc6;
   --md-text-dim: #b3a384;
@@ -213,7 +220,7 @@
 }
 
 /* Solarized — explicit Ethan Schoonover palettes for both modes. */
-.markdown-body.theme-solarized {
+.theme-solarized {
   --md-bg: #fdf6e3;
   --md-text: #657b83;
   --md-text-dim: #93a1a1;
@@ -224,13 +231,13 @@
   --md-font: "Iowan Old Style", Charter, Georgia, serif;
   line-height: 1.65;
 }
-.markdown-body.theme-solarized h1,
-.markdown-body.theme-solarized h2,
-.markdown-body.theme-solarized h3,
-.markdown-body.theme-solarized h4 {
+.theme-solarized h1,
+.theme-solarized h2,
+.theme-solarized h3,
+.theme-solarized h4 {
   color: #073642;
 }
-:root[data-theme="dark"] .markdown-body.theme-solarized {
+:root[data-theme="dark"] .theme-solarized {
   --md-bg: #002b36;
   --md-text: #93a1a1;
   --md-text-dim: #586e75;
@@ -239,10 +246,10 @@
   --md-accent: #cb4b16;
   --md-link: #268bd2;
 }
-:root[data-theme="dark"] .markdown-body.theme-solarized h1,
-:root[data-theme="dark"] .markdown-body.theme-solarized h2,
-:root[data-theme="dark"] .markdown-body.theme-solarized h3,
-:root[data-theme="dark"] .markdown-body.theme-solarized h4 {
+:root[data-theme="dark"] .theme-solarized h1,
+:root[data-theme="dark"] .theme-solarized h2,
+:root[data-theme="dark"] .theme-solarized h3,
+:root[data-theme="dark"] .theme-solarized h4 {
   color: #eee8d5;
 }
 
@@ -253,7 +260,7 @@
  * Ayu, Tokyo Night, GitLab, Notion, Medium). */
 
 /* Catppuccin — Latte (light) / Mocha (dark). */
-.markdown-body.theme-catppuccin {
+.theme-catppuccin {
   --md-bg: #eff1f5;
   --md-text: #4c4f69;
   --md-text-dim: #6c6f85;
@@ -263,7 +270,7 @@
   --md-link: #1e66f5;
   line-height: 1.6;
 }
-:root[data-theme="dark"] .markdown-body.theme-catppuccin {
+:root[data-theme="dark"] .theme-catppuccin {
   --md-bg: #1e1e2e;
   --md-text: #cdd6f4;
   --md-text-dim: #a6adc8;
@@ -274,7 +281,7 @@
 }
 
 /* Nord — Polar Night (dark) / Snow Storm (light). */
-.markdown-body.theme-nord {
+.theme-nord {
   --md-bg: #eceff4;
   --md-text: #2e3440;
   --md-text-dim: #4c566a;
@@ -284,7 +291,7 @@
   --md-link: #5e81ac;
   line-height: 1.6;
 }
-:root[data-theme="dark"] .markdown-body.theme-nord {
+:root[data-theme="dark"] .theme-nord {
   --md-bg: #2e3440;
   --md-text: #e5e9f0;
   --md-text-dim: #d8dee9;
@@ -295,7 +302,7 @@
 }
 
 /* Dracula — with the official Dracula Light. */
-.markdown-body.theme-dracula {
+.theme-dracula {
   --md-bg: #f8f8f2;
   --md-text: #282a36;
   --md-text-dim: #6272a4;
@@ -305,7 +312,7 @@
   --md-link: #8be9fd;
   line-height: 1.6;
 }
-:root[data-theme="dark"] .markdown-body.theme-dracula {
+:root[data-theme="dark"] .theme-dracula {
   --md-bg: #282a36;
   --md-text: #f8f8f2;
   --md-text-dim: #6272a4;
@@ -316,7 +323,7 @@
 }
 
 /* Gruvbox — light + dark (canonical). */
-.markdown-body.theme-gruvbox {
+.theme-gruvbox {
   --md-bg: #fbf1c7;
   --md-text: #3c3836;
   --md-text-dim: #7c6f64;
@@ -326,7 +333,7 @@
   --md-link: #076678;
   line-height: 1.65;
 }
-:root[data-theme="dark"] .markdown-body.theme-gruvbox {
+:root[data-theme="dark"] .theme-gruvbox {
   --md-bg: #282828;
   --md-text: #ebdbb2;
   --md-text-dim: #a89984;
@@ -337,7 +344,7 @@
 }
 
 /* Ayu — light + dark. */
-.markdown-body.theme-ayu {
+.theme-ayu {
   --md-font: "Iowan Old Style", Charter, Georgia, serif;
   --md-bg: #fafafa;
   --md-text: #5c6773;
@@ -348,7 +355,7 @@
   --md-link: #399ee6;
   line-height: 1.6;
 }
-:root[data-theme="dark"] .markdown-body.theme-ayu {
+:root[data-theme="dark"] .theme-ayu {
   --md-font: "Iowan Old Style", Charter, Georgia, serif;
   --md-bg: #0a0e14;
   --md-text: #b3b1ad;
@@ -360,7 +367,7 @@
 }
 
 /* Tokyo Night — light + dark. */
-.markdown-body.theme-tokyo-night {
+.theme-tokyo-night {
   --md-bg: #e8e9ec;
   --md-text: #343b58;
   --md-text-dim: #9699a3;
@@ -370,7 +377,7 @@
   --md-link: #007197;
   line-height: 1.6;
 }
-:root[data-theme="dark"] .markdown-body.theme-tokyo-night {
+:root[data-theme="dark"] .theme-tokyo-night {
   --md-bg: #1a1b26;
   --md-text: #c0caf5;
   --md-text-dim: #565f89;
@@ -381,7 +388,7 @@
 }
 
 /* GitLab — indigo brand, light + dark. */
-.markdown-body.theme-gitlab {
+.theme-gitlab {
   --md-bg: #ffffff;
   --md-text: #303030;
   --md-text-dim: #666;
@@ -391,7 +398,7 @@
   --md-link: #1068bf;
   line-height: 1.6;
 }
-:root[data-theme="dark"] .markdown-body.theme-gitlab {
+:root[data-theme="dark"] .theme-gitlab {
   --md-bg: #1f1f23;
   --md-text: #e4e4e4;
   --md-text-dim: #ababab;
@@ -402,7 +409,7 @@
 }
 
 /* Notion — clean reading, light + dark. */
-.markdown-body.theme-notion {
+.theme-notion {
   --md-bg: #ffffff;
   --md-text: #37352f;
   --md-text-dim: #787774;
@@ -412,7 +419,7 @@
   --md-link: #2383e2;
   line-height: 1.65;
 }
-:root[data-theme="dark"] .markdown-body.theme-notion {
+:root[data-theme="dark"] .theme-notion {
   --md-bg: #191919;
   --md-text: #dedede;
   --md-text-dim: #9b9a97;
@@ -423,7 +430,7 @@
 }
 
 /* Medium — serif reading, light + dark. */
-.markdown-body.theme-medium {
+.theme-medium {
   --md-font: Georgia, "Times New Roman", "Iowan Old Style", serif;
   --md-bg: #ffffff;
   --md-text: #242424;
@@ -434,7 +441,7 @@
   --md-link: #1a8917;
   line-height: 1.7;
 }
-:root[data-theme="dark"] .markdown-body.theme-medium {
+:root[data-theme="dark"] .theme-medium {
   --md-font: Georgia, "Times New Roman", "Iowan Old Style", serif;
   --md-bg: #1a1a1a;
   --md-text: #e6e6e6;

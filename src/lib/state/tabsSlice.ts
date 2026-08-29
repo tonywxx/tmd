@@ -27,6 +27,8 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (
     }));
     return id;
   },
+  // Both transitions below keep the file browser's selection in lockstep with
+  // the active tab, so the sidebar always highlights the file being edited.
   closeTab: (id) =>
     set((state) => {
       const idx = state.tabs.findIndex((t) => t.id === id);
@@ -37,9 +39,15 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (
         if (tabs.length === 0) activeTabId = null;
         else activeTabId = tabs[Math.min(idx, tabs.length - 1)].id;
       }
-      return { tabs, activeTabId };
+      const active = tabs.find((t) => t.id === activeTabId);
+      return { tabs, activeTabId, selectedPath: active?.filePath ?? null };
     }),
-  setActiveTab: (id) => set({ activeTabId: id }),
+  // Untitled / URL-backed tabs have no path, so they clear the selection.
+  setActiveTab: (id) =>
+    set((state) => ({
+      activeTabId: id,
+      selectedPath: state.tabs.find((t) => t.id === id)?.filePath ?? null,
+    })),
   updateTabContent: (id, content) =>
     set((state) => ({
       tabs: state.tabs.map((t) =>

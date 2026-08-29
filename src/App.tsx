@@ -22,7 +22,6 @@ import { registerDragDrop } from "./lib/dragDrop";
 import { executeCommand } from "./lib/commands";
 import { registerAppCommands } from "./lib/appCommands";
 import { checkForUpdates, downloadUpdate } from "./lib/updater";
-import { dirname } from "./lib/pathutil";
 import type { AccentColor } from "./lib/types";
 
 const ACCENT_COLORS: Record<AccentColor, string> = {
@@ -34,11 +33,6 @@ const ACCENT_COLORS: Record<AccentColor, string> = {
   amber: "#f59e0b",
   green: "#22c55e",
 };
-
-// Guard against registering the active-tab → sidebar sync more than once
-// (React StrictMode double-mounts effects in dev, and zustand subscriptions
-// are global).
-let activeTabSyncRegistered = false;
 
 // Minimum width for the editor and preview panes (px). The splitter clamps so
 // neither pane can be dragged away entirely.
@@ -79,7 +73,6 @@ export default function App() {
         const s = await api.getSettings();
         useStore.getState().setSettings(s);
         useStore.getState().setFavorites(s.favorites);
-        if (s.recentDirectories[0]) useStore.getState().setFolderPath(s.recentDirectories[0]);
       } catch (e) {
         console.error("Failed to load settings", e);
       }
@@ -133,31 +126,18 @@ export default function App() {
         localStorage.setItem("tmd_help_auto_opened", "1");
         void executeCommand("help");
       }
-      // Default the file browser to the user's home directory when there is
-      // no session folder and no recent directory to restore.
-      if (!useStore.getState().folderPath) {
-        try {
-          useStore.getState().setFolderPath(await api.homeDir());
-        } catch {
-          /* ignore home-dir failures */
-        }
+      // The browser is always rooted at the user's home directory. Only an
+      // explicit user action re-roots it (Open Folder, favorites, context
+      // menu) — opening a file never moves the tree.
+      try {
+        useStore.getState().setFolderPath(await api.homeDir());
+      } catch {
+        /* ignore home-dir failures */
       }
-      // When the active tab switches to a file-backed tab, point the browser
-      // at that file's directory so the sidebar always shows where the current
-      // document lives.
-      if (!activeTabSyncRegistered) {
-        activeTabSyncRegistered = true;
-        let lastActiveTabId = useStore.getState().activeTabId;
-        useStore.subscribe((state) => {
-          if (state.activeTabId === lastActiveTabId) return;
-          lastActiveTabId = state.activeTabId;
-          const tab = state.getActiveTab();
-          if (!tab?.filePath) return;
-          const dir = dirname(tab.filePath);
-          if (state.folderPath !== dir) state.setFolderPath(dir);
-          state.setSelectedPath(tab.filePath);
-        });
-      }
+      // The single exception: reveal the restored file once at launch, so its
+      // selection highlight is actually visible under a home-rooted tree.
+      const restored = useStore.getState().getActiveTab()?.filePath;
+      if (restored) void useStore.getState().revealPath(restored);
       unlisteners = await wireEvents();
       unlisteners.push(await registerDragDrop());
     })();
@@ -226,12 +206,10 @@ export default function App() {
         const t = useStore.getState().tabs.find((x) => x.filePath === session.activeFile);
         if (t) useStore.getState().setActiveTab(t.id);
       }
-      // Point the browser at the directory of the active (or first) open file
-      // so the sidebar shows where the restored documents live.
+      // Select the restored file; the browser root is always `~` and is set by
+      // the bootstrap above, never by the session.
       const st = useStore.getState();
       const target = st.getActiveTab()?.filePath ?? st.tabs.find((x) => x.filePath)?.filePath;
-      const dir = target ? dirname(target) : session.folderPath;
-      if (dir) st.setFolderPath(dir);
       if (target) st.setSelectedPath(target);
     } catch {
       /* no session */
@@ -307,7 +285,6 @@ export default function App() {
           void api.setSession(getCurrentWindow().label, {
             openFiles,
             activeFile,
-            folderPath: state.folderPath,
           });
         }, 600);
       }),

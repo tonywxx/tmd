@@ -8,6 +8,7 @@ export default function TabBar() {
   const activeTabId = useStore((s) => s.activeTabId);
   const setActiveTab = useStore((s) => s.setActiveTab);
   const closeTab = useStore((s) => s.closeTab);
+  const revealPath = useStore((s) => s.revealPath);
   const sidebarVisible = useStore((s) => s.sidebarVisible);
   const setSidebarVisible = useStore((s) => s.setSidebarVisible);
 
@@ -29,7 +30,12 @@ export default function TabBar() {
             key={t.id}
             className={"tab" + (t.id === activeTabId ? " active" : "")}
             data-tauri-drag-region="false"
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => {
+              setActiveTab(t.id);
+              // The tab may point at a file whose parent folders are collapsed
+              // — expand down to it so the new selection is actually visible.
+              if (t.filePath) void revealPath(t.filePath);
+            }}
             onMouseDown={(e) => {
               if (e.button === 1) {
                 e.preventDefault();

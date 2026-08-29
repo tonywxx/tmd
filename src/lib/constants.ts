@@ -48,6 +48,20 @@ export const MARKDOWN_EXTS = [
   ".txt",
 ];
 
+// Openable but not rendered as markdown: plain text and config formats.
+// Kept in sync with OPENABLE_EXTS in src-tauri/src/commands.rs.
+export const TEXT_EXTS = [".json", ".toml", ".yaml", ".yml"];
+
+// Largest file the browser will open on a single click. Matches the cap for
+// "Open from URL" to keep one notion of "too big" across the app.
+export const MAX_OPEN_BYTES = 10 * 1024 * 1024;
+
+// Extension-less form for the native open/save dialogs. Derived so the dialogs
+// can never drift from the sets above.
+export const OPENABLE_FILTER_EXTS = [...MARKDOWN_EXTS, ...TEXT_EXTS].map((e) =>
+  e.slice(1),
+);
+
 export const IMAGE_EXTS = [
   ".png",
   ".jpg",
@@ -63,6 +77,12 @@ export const IMAGE_EXTS = [
 export function isMarkdown(path: string): boolean {
   const lower = path.toLowerCase();
   return MARKDOWN_EXTS.some((e) => lower.endsWith(e));
+}
+
+/** Can the editor open this file at all (markdown or plain text/config)? */
+export function isOpenable(path: string): boolean {
+  const lower = path.toLowerCase();
+  return isMarkdown(lower) || TEXT_EXTS.some((e) => lower.endsWith(e));
 }
 
 export function isImage(path: string): boolean {
@@ -121,13 +141,3 @@ export const MIN_BROWSER_WIDTH = 120;
 export const MAX_BROWSER_WIDTH = 360;
 export const MIN_EDITOR_SPLIT = 0.2;
 export const MAX_EDITOR_SPLIT = 0.8;
-
-// System directory / dotfile ignore patterns for the file browser watcher.
-export const IGNORE_DIRS = new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  "dist-renderer",
-  "build",
-  "target",
-]);

@@ -9,9 +9,11 @@ import {
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import {
 	bracketMatching,
-	defaultHighlightStyle,
+	HighlightStyle,
+	LanguageDescription,
 	syntaxHighlighting,
 } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import { languages } from "@codemirror/language-data";
 import type { Extension } from "@codemirror/state";
 import {
@@ -41,6 +43,8 @@ import {
 	setActiveEditorPort,
 } from "../lib/editorPort";
 import { applyFormatting } from "../lib/formatActions";
+import { isMarkdown } from "../lib/constants";
+import { basename } from "../lib/pathutil";
 import { persistTab } from "../lib/persist";
 import {
 	autoSaveTimers,
@@ -103,12 +107,18 @@ function themeExtension(settings: Settings): Extension {
 		settings.fontFamily === "default"
 			? "ui-monospace, SFMono-Regular, Menlo, monospace"
 			: settings.fontFamily;
+	// Surfaces read the --md-* palette of the selected markdown theme (the editor
+	// host carries the matching .theme-* class), so the editor and preview share
+	// one palette. Themes without their own palette (github, academic, minimal,
+	// typewriter) fall back to the app chrome variables. The caret and the
+	// changed-line marker stay on the app accent: some palettes (Dracula Light,
+	// Ayu Light) have an --md-accent too pale to read as a cursor.
 	return EditorView.theme(
 		{
 			"&": {
 				fontSize: `${settings.fontSize}px`,
-				backgroundColor: "transparent",
-				color: isDark ? "#d4d7de" : "#1d1f24",
+				backgroundColor: "var(--md-bg, var(--bg))",
+				color: "var(--md-text, var(--text))",
 				height: "100%",
 			},
 			".cm-content": {
@@ -117,16 +127,20 @@ function themeExtension(settings: Settings): Extension {
 				padding: "16px 0",
 			},
 			".cm-gutters": {
-				backgroundColor: isDark ? "#15181d" : "#eef0f3",
+				// A touch darker than the surface regardless of palette polarity.
+				backgroundColor:
+					"color-mix(in srgb, var(--md-bg, var(--bg)) 94%, #000)",
 				border: "none",
-				borderRight: `1px solid ${isDark ? "#2a2f39" : "#dadce0"}`,
-				color: isDark ? "#5b6270" : "#a0a4ad",
+				borderRight: "1px solid var(--md-border, var(--border))",
+				color: "color-mix(in srgb, var(--md-text, var(--text)) 45%, transparent)",
 			},
 			".cm-activeLine": {
-				backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+				backgroundColor:
+					"color-mix(in srgb, var(--md-text, var(--text)) 6%, transparent)",
 			},
 			".cm-activeLineGutter": {
-				backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+				backgroundColor:
+					"color-mix(in srgb, var(--md-text, var(--text)) 9%, transparent)",
 			},
 			"&.cm-focused .cm-cursor": {
 				borderLeftColor: "var(--accent)",
@@ -147,8 +161,98 @@ function themeExtension(settings: Settings): Extension {
 	);
 }
 
+// CodeMirror's defaultHighlightStyle hardcodes light-theme token colors (URLs
+// and link labels #219, keywords #708, strings #a11…) which are unreadable on
+// the dark surface, so the editor ships its own palette. Every color resolves a
+// --sy-* variable (see index.css) so it flips with light/dark for free. Rules
+// later in the list win over earlier ones for a token carrying both tags.
+const editorHighlightStyle = HighlightStyle.define([
+	// URLs and link labels first: the rules below re-dim the punctuation around
+	// them ([, ], (, )), which carries processingInstruction as well.
+	{
+		tag: [tags.url, tags.link, tags.labelName],
+		color: "var(--sy-link)",
+	},
+	{
+		tag: [tags.meta, tags.processingInstruction, tags.contentSeparator],
+		color: "var(--sy-mark)",
+	},
+	{
+		tag: [
+			tags.comment,
+			tags.lineComment,
+			tags.blockComment,
+			tags.docComment,
+		],
+		color: "var(--sy-comment)",
+		fontStyle: "italic",
+	},
+	{ tag: tags.quote, color: "var(--sy-comment)" },
+	{
+		tag: [
+			tags.keyword,
+			tags.modifier,
+			tags.controlKeyword,
+			tags.operatorKeyword,
+			tags.definitionKeyword,
+			tags.moduleKeyword,
+		],
+		color: "var(--sy-keyword)",
+	},
+	{
+		tag: [
+			tags.string,
+			tags.docString,
+			tags.character,
+			tags.attributeValue,
+			tags.escape,
+			tags.regexp,
+			tags.special(tags.string),
+		],
+		color: "var(--sy-string)",
+	},
+	{
+		tag: [
+			tags.number,
+			tags.integer,
+			tags.float,
+			tags.bool,
+			tags.null,
+			tags.atom,
+			tags.unit,
+			tags.constant(tags.variableName),
+		],
+		color: "var(--sy-number)",
+	},
+	{
+		tag: [
+			tags.function(tags.variableName),
+			tags.function(tags.propertyName),
+			tags.macroName,
+		],
+		color: "var(--sy-function)",
+	},
+	{
+		tag: [
+			tags.typeName,
+			tags.className,
+			tags.namespace,
+			tags.standard(tags.variableName),
+		],
+		color: "var(--sy-type)",
+	},
+	{ tag: tags.heading, fontWeight: "600" },
+	{ tag: tags.strong, fontWeight: "600" },
+	{ tag: tags.emphasis, fontStyle: "italic" },
+	{ tag: tags.strikethrough, textDecoration: "line-through" },
+	{ tag: tags.invalid, color: "var(--sy-invalid)" },
+]);
+
 const lineNumbersComp = new Compartment();
 const themeComp = new Compartment();
+// Swapped per tab: markdown ships in the bundle, other openable types resolve
+// their parser by filename from @codemirror/language-data and load on demand.
+const languageComp = new Compartment();
 
 export default function Editor() {
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -158,11 +262,15 @@ export default function Editor() {
 	const settings = useStore((s) => s.settings);
 
 	const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
+	const filePath = activeTab?.filePath ?? null;
 
-	// (Re)build editor when the active tab changes.
+	// (Re)build editor when the active tab changes. Deliberately keyed on the tab
+	// id alone: `activeTab` is a fresh object on every keystroke, so depending on
+	// it destroyed and recreated the view while typing, which drops the caret out
+	// of the document (the old DOM is gone) and leaves the editor unfocusable.
 	useEffect(() => {
-		if (!containerRef.current) return;
-		if (!activeTab) {
+		const tab = useStore.getState().getActiveTab();
+		if (!tab) {
 			if (viewRef.current) {
 				viewRef.current.destroy();
 				viewRef.current = null;
@@ -170,18 +278,25 @@ export default function Editor() {
 			setActiveEditorPort(null);
 			return;
 		}
-		const tabId = activeTab.id;
+		if (!containerRef.current) return;
+		const tabId = tab.id;
+		const st = useStore.getState().settings;
 
 		const getBaseline = () => gitBaselineRef.get(tabId) ?? null;
 		const startState =
 			editorStatesRef.get(tabId) ??
 			(() => {
-				const st = EditorState.create({
-					doc: activeTab.content,
-					extensions: buildExtensions(settings, getBaseline, tabId),
+				const created = EditorState.create({
+					doc: tab.content,
+					extensions: buildExtensions(
+						st,
+						getBaseline,
+						tabId,
+						tab.filePath,
+					),
 				});
-				editorStatesRef.set(tabId, st);
-				return st;
+				editorStatesRef.set(tabId, created);
+				return created;
 			})();
 
 		const view = new EditorView({
@@ -264,7 +379,40 @@ export default function Editor() {
 			}
 			if (getActiveEditorPort() === port) setActiveEditorPort(null);
 		};
-	}, [activeTab, settings]);
+	}, [activeTabId]);
+
+	// Language follows the tab's filename: markdown uses the bundled mode, other
+	// openable types (JSON, TOML, YAML) resolve a parser from language-data and
+	// load it on demand. Reconfigured in place (not rebuilt) so a first save or
+	// Save As — which assigns/changes `filePath` — keeps the document and caret.
+	useEffect(() => {
+		const view = viewRef.current;
+		if (!view) return;
+		let cancelled = false;
+		const apply = (ext: Extension) => {
+			if (!cancelled && viewRef.current === view) {
+				view.dispatch({ effects: languageComp.reconfigure(ext) });
+			}
+		};
+		if (!filePath || isMarkdown(filePath)) {
+			apply(markdown({ base: markdownLanguage, codeLanguages: languages }));
+			return;
+		}
+		const desc = LanguageDescription.matchFilename(languages, basename(filePath));
+		if (!desc) {
+			apply([]);
+			return;
+		}
+		void desc
+			.load()
+			.then((support) => apply(support))
+			.catch(() => {
+				/* no parser for this type — plain text is fine */
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [filePath, activeTabId]);
 
 	// Reconfigure theme / line numbers when settings change.
 	useEffect(() => {
@@ -291,7 +439,14 @@ export default function Editor() {
 		);
 	}
 
-	return <div className="editor-host" ref={containerRef} />;
+	// The .theme-* class resolves the markdown palette's --md-* variables here,
+	// which the CodeMirror theme above reads.
+	return (
+		<div
+			className={"editor-host theme-" + settings.markdownTheme}
+			ref={containerRef}
+		/>
+	);
 }
 
 // Intercepts copy/cut/paste at the highest precedence so CodeMirror's own
@@ -328,6 +483,7 @@ function buildExtensions(
 	settings: Settings,
 	getBaseline: () => string | null,
 	tabId: number,
+	filePath: string | null,
 ): Extension[] {
 	const updateListener = EditorView.updateListener.of((update) => {
 		if (update.docChanged) {
@@ -361,8 +517,16 @@ function buildExtensions(
 		highlightActiveLine(),
 		bracketMatching(),
 		EditorView.lineWrapping,
-		markdown({ base: markdownLanguage, codeLanguages: languages }),
-		syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+		languageComp.of(
+			// Untitled tabs and markdown files use the bundled mode; everything
+			// else starts unhighlighted until its parser resolves.
+			filePath && !isMarkdown(filePath)
+				? []
+				: markdown({ base: markdownLanguage, codeLanguages: languages }),
+		),
+		// Not a fallback: an unstyled token inherits the (readable) surface text
+		// color, whereas defaultHighlightStyle would repaint it light-theme-only.
+		syntaxHighlighting(editorHighlightStyle),
 		keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
 		themeComp.of(themeExtension(settings)),
 		updateListener,

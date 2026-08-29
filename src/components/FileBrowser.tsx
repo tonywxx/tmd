@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import {
   Folder,
@@ -15,7 +15,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useStore } from "../lib/store";
 import { confirmDialog, messageDialog } from "../lib/bridge";
 import { getFileSystem } from "../lib/fs";
-import { openFileByPath } from "../lib/fileops";
+import { openFileByPath, openFileFromBrowser } from "../lib/fileops";
+import { isMarkdown, isOpenable } from "../lib/constants";
 import { basename, dirname, join } from "../lib/pathutil";
 import { type Favorite, type FileEntry, type SortMode } from "../lib/types";
 import { sortEntries, SORT_LABELS, isFavorite } from "../lib/fileBrowserModel";
@@ -48,6 +49,17 @@ export default function FileBrowser() {
   // and the pane tracks the cursor immediately.
   const [resizing, setResizing] = useState(false);
   const draggingRef = useRef(false);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Keep the selection on screen. The extra deps matter: after a launch-time
+  // reveal the selected row only exists once its ancestors finish loading.
+  // `block: "nearest"` makes this a no-op when the row is already visible.
+  useEffect(() => {
+    if (!selectedPath) return;
+    listRef.current
+      ?.querySelector<HTMLElement>(".fb-row.selected")
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedPath, expandedDirs, dirChildren]);
 
   async function chooseFolder() {
     const picked = (await open({ directory: true, multiple: false })) as string | null;
@@ -174,6 +186,7 @@ export default function FileBrowser() {
     const isLoading = isDir && !!loadingDirs[entry.path];
     const children = isDir ? dirChildren[entry.path] : undefined;
     const isRenaming = renaming?.path === entry.path;
+    const isOpenableFile = !isDir && isOpenable(entry.path);
     const pad = 8 + depth * 14;
 
     const row = (
@@ -181,16 +194,15 @@ export default function FileBrowser() {
         className={
           "fb-row" +
           (selectedPath === entry.path ? " selected" : "") +
-          (isDir ? " is-dir" : "")
+          (isDir ? " is-dir" : "") +
+          (isOpenableFile ? " is-openable" : "") +
+          (isOpenableFile && isMarkdown(entry.path) ? " is-md" : "")
         }
         style={{ paddingLeft: pad }}
         onClick={() => {
           setSelectedPath(entry.path);
           if (isDir) toggleDir(entry.path);
-        }}
-        onDoubleClick={() => {
-          if (isDir) toggleDir(entry.path);
-          else void openFileByPath(entry.path);
+          else if (isOpenableFile) void openFileFromBrowser(entry.path);
         }}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -303,10 +315,13 @@ export default function FileBrowser() {
             <div
               key={f.path}
               className="fb-row favorite"
-              onClick={() => setSelectedPath(f.path)}
-              onDoubleClick={() =>
-                f.type === "directory" ? setFolderPath(f.path) : openFileByPath(f.path)
-              }
+              onClick={() => {
+                setSelectedPath(f.path);
+                if (f.type === "file") void openFileFromBrowser(f.path);
+              }}
+              onDoubleClick={() => {
+                if (f.type === "directory") setFolderPath(f.path);
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setContextMenu({ x: e.clientX, y: e.clientY, path: f.path, isDir: f.type === "directory" });
@@ -330,7 +345,7 @@ export default function FileBrowser() {
         </div>
       )}
 
-      <div className="fb-list">
+      <div className="fb-list" ref={listRef}>
         {folderPath ? (
           rootError ? (
             <div className="fb-empty fb-error"><Icon icon={TriangleAlert} /> Cannot open folder: {rootError}</div>

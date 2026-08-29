@@ -6,6 +6,7 @@ import { getBackend } from "./backend";
 import { getFileSystem } from "./fs";
 import { openFileByPath } from "./fileops";
 import { persistTab, saveTabAs } from "./persist";
+import { OPENABLE_FILTER_EXTS } from "./constants";
 import { renderMarkdown } from "./markdown";
 import { dirname, join } from "./pathutil";
 import { executeCommand } from "./commands";
@@ -27,9 +28,7 @@ import markdownThemesCss from "./markdown-themes.css?raw";
 async function handleOpenFile() {
   const p = (await open({
     multiple: false,
-    filters: [
-      { name: "Markdown", extensions: ["md", "markdown", "mdown", "mkd", "txt"] },
-    ],
+    filters: [{ name: "Markdown & text", extensions: OPENABLE_FILTER_EXTS }],
   })) as string | null;
   if (p) await openFileByPath(p);
 }

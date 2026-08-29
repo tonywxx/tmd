@@ -1,3 +1,4 @@
+import { isMarkdown, isOpenable } from "./constants";
 import { renderMarkdown } from "./markdown";
 import { renderMermaidBlocks } from "./mermaidFigure";
 import { basename } from "./pathutil";
@@ -27,6 +28,16 @@ export interface PreviewPipeline {
 export function createPreviewPipeline(stages: PreviewStage[]): PreviewPipeline {
   return {
     async render(el, content, ctx) {
+      // Openable files that are not markdown (JSON, TOML, YAML) are shown
+      // verbatim — running them through the markdown renderer mangles them.
+      if (ctx.filePath && isOpenable(ctx.filePath) && !isMarkdown(ctx.filePath)) {
+        el.innerHTML = "";
+        const pre = document.createElement("pre");
+        pre.className = "preview-plain";
+        pre.textContent = content;
+        el.appendChild(pre);
+        return;
+      }
       // The pipeline owns the preview DOM. Markdown first, then each
       // post-render stage in order; the last stage to run wins per element.
       el.innerHTML = renderMarkdown(content);

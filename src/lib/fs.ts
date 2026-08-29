@@ -1,4 +1,5 @@
 import { api } from "./bridge";
+import { isOpenable } from "./constants";
 import type { FileEntry, FileStat, ResolvedPath, SearchResult } from "./types";
 
 // ---- File-system context seam ----
@@ -110,7 +111,7 @@ export class InMemoryFileSystem implements FileSystem {
       name,
       path,
       isDirectory: n.isDirectory,
-      isMarkdown: /\.(md|markdown|mdown|mkd|mkdn|mdwn|mdx|txt)$/i.test(name),
+      isOpenable: isOpenable(name),
       modifiedTime: n.modifiedTime,
       createdTime: n.createdTime,
     };
@@ -145,7 +146,11 @@ export class InMemoryFileSystem implements FileSystem {
   async fileStat(path: string): Promise<FileStat | null> {
     const n = this.nodes.get(path);
     if (!n) return null;
-    return { modifiedTime: n.modifiedTime, createdTime: n.createdTime };
+    return {
+      modifiedTime: n.modifiedTime,
+      createdTime: n.createdTime,
+      size: n.content.length,
+    };
   }
 
   async fileExists(path: string): Promise<boolean> {

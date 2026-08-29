@@ -10,13 +10,29 @@ This file is the single source of ubiquitous language for the project.
   when `content !== savedContent`. Each tab owns its own CodeMirror `EditorState`
   so undo/redo history is isolated per tab.
 - **Active tab** — the tab currently shown in the editor/preview panes.
-- **File browser** — a sidebar showing the contents of the current folder plus
+- **File browser** — a sidebar showing the contents of the **root folder** plus
   the user's **favorites** (pinned files or directories). Entries can be sorted
-  and (optionally) show modification dates.
+  and (optionally) show modification dates. **Markdown file** names are visually
+  marked so the user can see at a glance which entries are openable.
+- **Root folder** — the folder the file browser is rooted at. Defaults to the
+  user's home directory at launch and changes **only** when the user explicitly
+  picks a folder (folder button, Open Folder, favorites, context menu). It never
+  follows the active tab, and opening a file never expands or re-roots the tree.
+  The one exception is launch-time **reveal** of the restored file.
+- **Openable file** — a file tmd will open in the editor: either a **Markdown
+  file** or a plain-text/config file (`.json`, `.toml`, `.yaml`, `.yml`).
+  Everything else (images, binaries, other source code) is not openable.
+- **Markdown file** — an openable file with one of the extensions `.md`,
+  `.markdown`, `.mdown`, `.mkd`, `.mkdn`, `.mdwn`, `.mdx`, `.txt`. Only these get
+  markdown syntax in the editor and a rendered **Markdown preview**; other
+  openable files are shown as plain text. (`.txt` counts as markdown here — that
+  is pre-existing behaviour, not a new decision.)
 - **Favorite** — a pinned file or directory path shown above the folder listing.
 - **Markdown preview** — a sanitized HTML rendering of the active tab's content
   (GFM via `marked`, sanitized via `DOMPurify`). Scroll position is kept in sync
-  with the editor (proportional, cooldown-guarded).
+  with the editor (proportional, cooldown-guarded). For an openable file that is
+  not a **Markdown file**, the pane shows the content as preformatted plain text
+  instead of rendering it.
 - **Git gutter** — a marker in the editor gutter on lines that differ from a
   baseline (the file's git HEAD version, or the saved content when untracked).
 - **Formatting action** — a smart toggle (bold, italic, heading, list, quote,
@@ -40,8 +56,8 @@ This file is the single source of ubiquitous language for the project.
   the tab bar shows a link indicator. Fetching happens in the webview (CSP
   allows `https:`/`http:` in `connect-src`) and is CORS-limited to endpoints
   that permit cross-origin reads.
-- **Session** — the set of open files, the active file, and the current folder,
-  persisted per window and restored on launch.
+- **Session** — the set of open files and the active file, persisted per window
+  and restored on launch. The **root folder** is no longer part of the session.
 - **Recent files / directories** — most-recently-used paths, persisted in
   settings and shown in the menu and browser.
 - **Settings** — user preferences (theme, accent, fonts, auto-save, sort,
@@ -64,3 +80,8 @@ This file is the single source of ubiquitous language for the project.
 - External (disk) changes to a non-dirty tab replace the editor content silently;
   external changes to a dirty tab trigger the DiffView.
 - All filesystem access goes through the security allowlist.
+- Opening a file never changes the **root folder** and never expands the tree;
+  the browser's navigation state is a function of user intent only.
+- A file is openable iff its extension is in the **Openable file** set; whether
+  it is *rendered* (preview, markdown highlighting) depends on the narrower
+  **Markdown file** set.

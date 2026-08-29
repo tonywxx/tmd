@@ -8,7 +8,7 @@ pub struct FileEntry {
     pub name: String,
     pub path: String,
     pub is_directory: bool,
-    pub is_markdown: bool,
+    pub is_openable: bool,
     pub modified_time: u64,
     pub created_time: u64,
 }
@@ -18,6 +18,7 @@ pub struct FileEntry {
 pub struct FileStat {
     pub modified_time: u64,
     pub created_time: u64,
+    pub size: u64,
 }
 
 #[derive(Serialize)]
@@ -121,5 +122,4 @@ pub struct Favorite {
 pub struct Session {
     pub open_files: Vec<String>,
     pub active_file: Option<String>,
-    pub folder_path: Option<String>,
 }

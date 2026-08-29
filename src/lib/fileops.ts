@@ -1,6 +1,6 @@
 import { useStore } from "./store";
 import { getFileSystem } from "./fs";
-import { isMarkdown } from "./constants";
+import { isOpenable, MAX_OPEN_BYTES } from "./constants";
 import { dirname } from "./pathutil";
 import { gitBaselineRef } from "./refs";
 import { getActiveEditorPort } from "./editorPort";
@@ -16,8 +16,8 @@ export async function openFileByPath(path: string): Promise<number | null> {
     requestGitBaseline(existing.id, path);
     return existing.id;
   }
-  if (!isMarkdown(path)) {
-    store.pushToast("Not a markdown file.", "warning");
+  if (!isOpenable(path)) {
+    store.pushToast("Not a text file.", "warning");
     return null;
   }
   let content = "";
@@ -54,6 +54,25 @@ export async function openFileByPath(path: string): Promise<number | null> {
   }
   requestGitBaseline(id, path);
   return id;
+}
+
+// Entry point for single clicks in the file browser. Non-openable files are
+// silently ignored (a click is not an explicit "open this"), and anything over
+// the size cap is refused up front so a stray click cannot pull a huge file
+// into memory — openFileByPath reads the whole file with no such check.
+export async function openFileFromBrowser(path: string): Promise<void> {
+  if (!isOpenable(path)) return;
+  const stat = await getFileSystem().fileStat(path).catch(() => null);
+  if (stat && stat.size > MAX_OPEN_BYTES) {
+    useStore
+      .getState()
+      .pushToast(
+        `File is too large to open (max ${MAX_OPEN_BYTES / 1024 / 1024} MB).`,
+        "error",
+      );
+    return;
+  }
+  await openFileByPath(path);
 }
 
 export function requestGitBaseline(id: number, path: string) {

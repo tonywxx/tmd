@@ -19,6 +19,18 @@
   --row-hover: #e6e6ec;
   --row-selected: #d8e6ff;
   --code-bg: #ececf0;
+  /* Editor syntax palette. CodeMirror's defaultHighlightStyle hardcodes
+   * light-theme colors (#219 URLs, #708 keywords), so editor highlighting is
+   * driven by these instead — see editorHighlightStyle in components/Editor.tsx. */
+  --sy-comment: #6e7781;
+  --sy-mark: #8c959f;
+  --sy-keyword: #cf222e;
+  --sy-string: #0a3069;
+  --sy-number: #0550ae;
+  --sy-link: #0550ae;
+  --sy-function: #8250df;
+  --sy-type: #953800;
+  --sy-invalid: #cb2431;
 }
 
 :root[data-theme="dark"] {
@@ -31,6 +43,15 @@
   --row-hover: #2a2f39;
   --row-selected: #243049;
   --code-bg: #2a2f39;
+  --sy-comment: #8b949e;
+  --sy-mark: #7d8590;
+  --sy-keyword: #ff7b72;
+  --sy-string: #a5d6ff;
+  --sy-number: #79c0ff;
+  --sy-link: #79c0ff;
+  --sy-function: #d2a8ff;
+  --sy-type: #ffa657;
+  --sy-invalid: #f85149;
 }
 
 * {
@@ -166,6 +187,19 @@ body {
   flex-direction: column;
 }
 
+/* Openable files that are not markdown (JSON, TOML, YAML) are shown verbatim
+ * instead of being run through the markdown renderer. */
+.preview-plain {
+  margin: 0;
+  padding: 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
 /* ---------- File browser ---------- */
 .fb-header {
   display: flex;
@@ -234,6 +268,14 @@ body {
 }
 .fb-row.is-dir {
   cursor: pointer;
+}
+.fb-row.is-openable {
+  cursor: pointer;
+}
+/* Markdown files are marked so the user can see at a glance which rows open. */
+.fb-row.is-md .fb-name {
+  color: var(--accent);
+  font-weight: 600;
 }
 .fb-row.selected {
   background: var(--row-selected);

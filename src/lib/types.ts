@@ -92,7 +92,7 @@ export interface FileEntry {
   name: string;
   path: string;
   isDirectory: boolean;
-  isMarkdown: boolean;
+  isOpenable: boolean;
   modifiedTime: number;
   createdTime: number;
 }
@@ -100,12 +100,12 @@ export interface FileEntry {
 export interface Session {
   openFiles: string[];
   activeFile: string | null;
-  folderPath: string | null;
 }
 
 export interface FileStat {
   modifiedTime: number;
   createdTime: number;
+  size: number;
 }
 
 export interface ResolvedPath {

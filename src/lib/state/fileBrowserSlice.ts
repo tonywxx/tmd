@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 import type { AppState, FileBrowserSlice } from "./types";
 import { getFileSystem } from "../fs";
+import { dirname } from "../pathutil";
 import { favEq } from "../types";
 
 export const createFileBrowserSlice: StateCreator<
@@ -69,6 +70,31 @@ export const createFileBrowserSlice: StateCreator<
       get().setDirError(path, String(e));
     } finally {
       get().setLoading(path, false);
+    }
+  },
+  // Select `target`, expanding (and loading) the tree down to it only when it
+  // is not already on screen. Opening a file must not move the tree, so this
+  // is reserved for explicit reveals: launch-time restore and tab switches.
+  revealPath: async (target) => {
+    const { folderPath, expandedDirs } = get();
+    get().setSelectedPath(target);
+    // Boundary-aware: "/Users/tony/x.md" is under "/Users/tony", but
+    // "/Users/tonyfoo/x.md" is not.
+    if (!folderPath || !target.startsWith(folderPath + "/")) return;
+    const chain: string[] = [];
+    let cur = dirname(target);
+    while (cur.length > folderPath.length) {
+      chain.unshift(cur);
+      const next = dirname(cur);
+      if (next === cur) break;
+      cur = next;
+    }
+    // Already visible: selecting it is enough, re-reading the tree would just
+    // make every tab switch churn the directory listings.
+    if (chain.every((dir) => expandedDirs[dir])) return;
+    for (const dir of chain) {
+      get().setExpanded(dir, true);
+      await get().loadDir(dir);
     }
   },
   refreshTree: async () => {

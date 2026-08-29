@@ -35,13 +35,27 @@ pub fn log_frontend_error(msg: String) -> CmdResult<()> {
     Ok(())
 }
 
-const MARKDOWN_EXTS: &[&str] = &[
+// Files the editor will open: markdown plus plain text/config formats. Kept in
+// sync with MARKDOWN_EXTS / TEXT_EXTS in src/lib/constants.ts.
+const OPENABLE_EXTS: &[&str] = &[
     ".md", ".markdown", ".mdown", ".mkd", ".mkdn", ".mdwn", ".mdx", ".txt",
+    ".json", ".toml", ".yaml", ".yml",
 ];
 
-fn is_markdown(path: &str) -> bool {
+// Directories the browser never lists: build output and huge dependency trees
+// that would otherwise flood the tree and the IPC payload.
+const IGNORE_DIRS: &[&str] = &[
+    "node_modules",
+    ".git",
+    "dist",
+    "dist-renderer",
+    "build",
+    "target",
+];
+
+fn is_openable(path: &str) -> bool {
     let lower = path.to_ascii_lowercase();
-    MARKDOWN_EXTS.iter().any(|e| lower.ends_with(e))
+    OPENABLE_EXTS.iter().any(|e| lower.ends_with(e))
 }
 
 fn fs_meta_time(meta: &fs::Metadata, created: bool) -> u64 {
@@ -113,11 +127,14 @@ pub fn read_directory(path: String) -> CmdResult<Vec<FileEntry>> {
             Err(_) => continue,
         };
         let is_dir = meta.is_dir();
+        if is_dir && IGNORE_DIRS.contains(&name.as_str()) {
+            continue;
+        }
         entries.push(FileEntry {
             name,
             path: p.to_string_lossy().to_string(),
             is_directory: is_dir,
-            is_markdown: !is_dir && is_markdown(&p.to_string_lossy()),
+            is_openable: !is_dir && is_openable(&p.to_string_lossy()),
             modified_time: fs_meta_time(&meta, false),
             created_time: fs_meta_time(&meta, true),
         });
@@ -140,6 +157,7 @@ pub fn file_stat(path: String) -> CmdResult<Option<FileStat>> {
         Ok(m) => Ok(Some(FileStat {
             modified_time: fs_meta_time(&m, false),
             created_time: fs_meta_time(&m, true),
+            size: m.len(),
         })),
         Err(_) => Ok(None),
     }
@@ -345,7 +363,7 @@ pub fn search_in_folder(
                     *match_count += 1;
                 }
                 // content scan (text files only)
-                if is_markdown(&name) || name.ends_with(".txt") {
+                if is_openable(&name) {
                     if let Ok(content) = fs::read_to_string(&p) {
                         for (i, line) in content.lines().enumerate() {
                             let hay = if case_sensitive {
