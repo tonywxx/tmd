@@ -147,8 +147,10 @@ When a file is **modified on disk by an external process** while the current tab
 | Close Window                      | ⌘⇧W      |
 | Undo / Redo                       | ⌘Z / ⌘⇧Z |
 | Select All                        | ⌘A       |
+| Find                              | ⌘F       |
+| Find Next / Find Previous         | ⌘G / ⌘⇧G |
+| Replace                           | ⌘⌥F      |
 | Copy Selection (with path prefix) | ⌘⌥C      |
-| Find in Folder                    | ⌘⇧G      |
 | Focus Mode                        | ⌘⇧F      |
 | Reload / Force Reload             | ⌘R / ⌘⇧R |
 | Toggle DevTools                   | ⌘⇧I      |
@@ -298,7 +300,7 @@ open "tmd://open?path=$HOME/notes/hello.md&line=1"
 
 ### 3. Search in a folder
 
-Press **⌘⇧G** to open "Find in Folder":
+Choose **Edit → Find in Folder** to open the folder search panel:
 
 - Enter a keyword, optionally case-sensitive;
 - Click a result to open the file and jump to that line.

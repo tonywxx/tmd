@@ -272,9 +272,8 @@ body {
 .fb-row.is-openable {
   cursor: pointer;
 }
-/* Markdown files are marked so the user can see at a glance which rows open. */
-.fb-row.is-md .fb-name {
-  color: var(--accent);
+/* Openable files are shown bold so the user can see at a glance which rows open. */
+.fb-row.is-openable .fb-name {
   font-weight: 600;
 }
 .fb-row.selected {
@@ -485,6 +484,7 @@ body {
   display: flex;
   flex: 1;
   overflow-x: auto;
+  min-height: 0;
 }
 .tab {
   display: flex;
@@ -495,6 +495,13 @@ body {
   cursor: pointer;
   font-size: 13px;
   max-width: 220px;
+  /* Fixed height + `min-height: 0` so the tab never grows to fit its content's
+     line-box / min-content. `min-height: 0` overrides the flex-item default
+     `min-height: auto` (a WebKit-known footgun where `overflow: hidden` is
+     ignored when sizing the cross axis), keeping the tab bar height stable
+     regardless of the tab name. */
+  height: 36px;
+  min-height: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -502,6 +509,9 @@ body {
 .tab.active {
   background: var(--bg);
   font-weight: 600;
+}
+.tab.preview .tab-name {
+  font-style: italic;
 }
 .tab-name {
   overflow: hidden;

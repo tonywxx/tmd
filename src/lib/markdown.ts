@@ -1,5 +1,5 @@
 import { marked } from "marked";
-import type { RendererObject } from "marked";
+import type { RendererObject, Token } from "marked";
 import type { Config } from "dompurify";
 import DOMPurify from "dompurify";
 import "./highlight-theme.css";
@@ -71,7 +71,7 @@ type SanitizeTags = {
 };
 
 const BASE_SANITIZE: SanitizeTags = {
-  ADD_ATTR: ["target", "rel", "checked", "disabled", "type", "id"],
+  ADD_ATTR: ["target", "rel", "checked", "disabled", "type", "id", "data-line"],
   ADD_TAGS: ["input"],
   FORBID_TAGS: ["style", "script"],
   ALLOW_DATA_ATTR: false,
@@ -90,7 +90,87 @@ const SANITIZE_CONFIG: Config = features.reduce((cfg, f) => {
   return cfg;
 }, structuredClone(BASE_SANITIZE));
 
-export function renderMarkdown(src: string): string {
-  const raw = marked.parse(src, { async: false }) as string;
-  return DOMPurify.sanitize(raw, SANITIZE_CONFIG);
+// Block renderers that produce a top-level element. When `lineMarkers` is set,
+// each rendered block is stamped with a data-line attribute (the 1-based source
+// line its token starts at), so the editor↔preview scroll sync can map a source
+// line to a preview position even when a block — an image, code fence, table —
+// renders to a very different height than its source lines.
+const BLOCK_RENDERER_METHODS = [
+  "space",
+  "code",
+  "blockquote",
+  "html",
+  "heading",
+  "hr",
+  "list",
+  "paragraph",
+  "table",
+] as const;
+
+// 1-based source line each top-level token starts at, accumulated from raw
+// lengths (tokens do not carry their own line numbers).
+function tokenLineMap(tokens: Token[]): Map<Token, number> {
+  const map = new Map<Token, number>();
+  let line = 1;
+  for (const t of tokens) {
+    map.set(t, line);
+    line += (t.raw.match(/\n/g) ?? []).length;
+  }
+  return map;
+}
+
+// Stamp data-line onto the first opening tag of a rendered block.
+function injectLineMarker(html: string, line: number | undefined): string {
+  if (line == null) return html;
+  const m = /^<([a-zA-Z][a-zA-Z0-9]*)(\s[^>]*)?>/.exec(html);
+  if (!m) return html;
+  return `<${m[1]} data-line="${line}"${m[2] ?? ""}>${html.slice(m[0].length)}`;
+}
+
+export function renderMarkdown(src: string, lineMarkers = false): string {
+  if (!lineMarkers) {
+    const raw = marked.parse(src, { async: false }) as string;
+    return DOMPurify.sanitize(raw, SANITIZE_CONFIG);
+  }
+
+  // Mirror marked.parse's synchronous pipeline (preprocess → lex →
+  // processAllTokens → walkTokens → parse → postprocess) so the renderer sees
+  // the exact tokens it renders and can stamp each block with its source line.
+  // Verified byte-identical to marked.parse for the same input, apart from the
+  // injected data-line attributes. Opt-in so HTML export keeps its clean output.
+  const options = { ...marked.defaults, async: false };
+  const hooks = options.hooks;
+  let text = hooks ? hooks.preprocess(src) : src;
+  const tokens = (hooks ? hooks.provideLexer(true) : marked.lexer)(
+    text,
+    options,
+  );
+  const processed = hooks ? hooks.processAllTokens(tokens) : tokens;
+  if (options.walkTokens) marked.walkTokens(processed, options.walkTokens);
+
+  const lines = tokenLineMap(processed);
+
+  const base = options.renderer ?? new marked.Renderer(options);
+  const renderer = Object.create(Object.getPrototypeOf(base)) as typeof base;
+  Object.assign(renderer, base);
+  const wrapped = renderer as unknown as Record<
+    string,
+    (this: unknown, token: Token) => string
+  >;
+  for (const name of BLOCK_RENDERER_METHODS) {
+    const orig = wrapped[name];
+    if (typeof orig === "function") {
+      wrapped[name] = function (this: unknown, token: Token) {
+        return injectLineMarker(orig.call(this, token), lines.get(token));
+      };
+    }
+  }
+
+  const parser = new marked.Parser({ ...options, renderer });
+  // Feature renderers chain onto the shared renderer instance and read
+  // this.parser from it; the Parser only sets parser on the wrapper above.
+  if (options.renderer) options.renderer.parser = parser;
+  let html = parser.parse(processed);
+  if (hooks) html = hooks.postprocess(html);
+  return DOMPurify.sanitize(html, SANITIZE_CONFIG);
 }

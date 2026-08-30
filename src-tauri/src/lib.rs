@@ -12,7 +12,7 @@ use tauri::{AppHandle, Emitter, Listener, Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 use types::Settings;
 
-const WEBSITE_URL: &str = "https://mipyip.com";
+const WEBSITE_URL: &str = "https://github.com/tonywxx/tmd";
 const GITHUB_URL: &str = "https://github.com/tonywxx/tmd";
 
 fn focused_or_main(app: &AppHandle) -> Option<tauri::WebviewWindow> {
@@ -38,17 +38,14 @@ fn spawn_main_window(app: &AppHandle, label: &str) {
         }
         return;
     }
-    let _ = tauri::WebviewWindowBuilder::new(
-        app,
-        label,
-        tauri::WebviewUrl::App("/?fresh=true".into()),
-    )
-    .title("tmd")
-    .inner_size(1100.0, 720.0)
-    .min_inner_size(640.0, 400.0)
-    .decorations(false)
-    .transparent(true)
-    .build();
+    let _ =
+        tauri::WebviewWindowBuilder::new(app, label, tauri::WebviewUrl::App("/?fresh=true".into()))
+            .title("tmd")
+            .inner_size(1100.0, 720.0)
+            .min_inner_size(640.0, 400.0)
+            .decorations(false)
+            .transparent(true)
+            .build();
 }
 
 // Bring the main window back on screen. Closing it hides it rather than
@@ -94,7 +91,8 @@ fn build_menu(app: &AppHandle, recent: Vec<String>) -> tauri::menu::Menu<tauri::
     let mut recent_owned: Vec<tauri::menu::MenuItem<tauri::Wry>> = Vec::new();
     if recent.is_empty() {
         recent_owned.push(
-            tauri::menu::MenuItem::with_id(app, "recent-none", "(None)", false, None::<&str>).unwrap(),
+            tauri::menu::MenuItem::with_id(app, "recent-none", "(None)", false, None::<&str>)
+                .unwrap(),
         );
     } else {
         for f in recent.iter().take(15) {
@@ -122,7 +120,10 @@ fn build_menu(app: &AppHandle, recent: Vec<String>) -> tauri::menu::Menu<tauri::
         app,
         "Export As",
         true,
-        &[&item("export-pdf", "PDF", ""), &item("export-html", "HTML", "")],
+        &[
+            &item("export-pdf", "PDF", ""),
+            &item("export-html", "HTML", ""),
+        ],
     )
     .unwrap();
 
@@ -184,10 +185,22 @@ fn build_menu(app: &AppHandle, recent: Vec<String>) -> tauri::menu::Menu<tauri::
             &item("paste", "Paste", "CmdOrCtrl+V"),
             &item("select-all", "Select All", "CmdOrCtrl+A"),
             &PredefinedMenuItem::separator(app).unwrap(),
+            &item("find", "Find…", "CmdOrCtrl+F"),
+            &item("find-next", "Find Next", "CmdOrCtrl+G"),
+            &item("find-previous", "Find Previous", "CmdOrCtrl+Shift+G"),
+            &PredefinedMenuItem::separator(app).unwrap(),
+            &item("replace", "Replace…", "CmdOrCtrl+Alt+F"),
+            &PredefinedMenuItem::separator(app).unwrap(),
             &item("copy-file-content", "Copy File Contents", ""),
-            &item("copy-selection-with-context", "Copy Selection with Path", "CmdOrCtrl+Alt+C"),
+            &item(
+                "copy-selection-with-context",
+                "Copy Selection with Path",
+                "CmdOrCtrl+Alt+C",
+            ),
             &transforms_sub,
-            &item("find-in-folder", "Find in Folder…", "CmdOrCtrl+Shift+G"),
+            // No accelerator: ⌘⇧G is Find Previous, ⌘⇧F is Focus Mode, so
+            // "Find in Folder" stays reachable from the Edit menu only.
+            &item("find-in-folder", "Find in Folder…", ""),
         ],
     )
     .unwrap();
@@ -240,7 +253,14 @@ fn build_menu(app: &AppHandle, recent: Vec<String>) -> tauri::menu::Menu<tauri::
 
     tauri::menu::Menu::with_items(
         app,
-        &[&app_sub, &file_sub, &edit_sub, &view_sub, &window_sub, &help_sub],
+        &[
+            &app_sub,
+            &file_sub,
+            &edit_sub,
+            &view_sub,
+            &window_sub,
+            &help_sub,
+        ],
     )
     .unwrap()
 }
@@ -290,9 +310,10 @@ pub fn run() {
 
     builder = builder.setup(|app| {
         let app_handle = app.handle().clone();
-        let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| {
-            std::path::PathBuf::from(std::env::temp_dir()).join("tmd")
-        });
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from(std::env::temp_dir()).join("tmd"));
         let store = Store::new(app_data_dir);
         let watcher = watcher::init(&app_handle);
         let settings = store.get_settings();
@@ -359,6 +380,10 @@ pub fn run() {
             "copy" => emit_menu(app, "menu-copy", ()),
             "paste" => emit_menu(app, "menu-paste", ()),
             "select-all" => emit_menu(app, "menu-select-all", ()),
+            "find" => emit_menu(app, "menu-find", ()),
+            "find-next" => emit_menu(app, "menu-find-next", ()),
+            "find-previous" => emit_menu(app, "menu-find-previous", ()),
+            "replace" => emit_menu(app, "menu-replace", ()),
             "copy-file-content" => emit_menu(app, "menu-copy-file-content", ()),
             "copy-selection-with-context" => emit_menu(app, "menu-copy-selection-with-context", ()),
             "find-in-folder" => emit_menu(app, "menu-find-in-folder", ()),
@@ -484,7 +509,8 @@ pub fn run() {
         // screen: bring the hidden main window back.
         #[cfg(target_os = "macos")]
         tauri::RunEvent::Reopen {
-            has_visible_windows, ..
+            has_visible_windows,
+            ..
         } => {
             if !has_visible_windows {
                 show_main_window(&app_handle);

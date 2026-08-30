@@ -149,6 +149,10 @@ export function registerAppCommands(): void {
 	registerCommand("goto-line", (line) => {
 		getActiveEditorPort()?.navigateToLine(Number(line));
 	});
+	registerCommand("find", () => getActiveEditorPort()?.openSearchPanel());
+	registerCommand("find-next", () => getActiveEditorPort()?.findNext());
+	registerCommand("find-previous", () => getActiveEditorPort()?.findPrevious());
+	registerCommand("replace", () => getActiveEditorPort()?.openReplacePanel());
 
 	// ---- window / view ----
 	registerCommand("focus-mode", () => {

@@ -38,9 +38,10 @@ export function createPreviewPipeline(stages: PreviewStage[]): PreviewPipeline {
         el.appendChild(pre);
         return;
       }
-      // The pipeline owns the preview DOM. Markdown first, then each
+      // The pipeline owns the preview DOM. Markdown first (with line markers so
+      // the scroll sync can map source lines to preview blocks), then each
       // post-render stage in order; the last stage to run wins per element.
-      el.innerHTML = renderMarkdown(content);
+      el.innerHTML = renderMarkdown(content, true);
       for (const stage of stages) {
         await stage(el, ctx);
       }

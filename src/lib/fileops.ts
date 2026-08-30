@@ -13,6 +13,9 @@ export async function openFileByPath(path: string): Promise<number | null> {
   if (existing) {
     store.setActiveTab(existing.id);
     store.setSelectedPath(path);
+    // An explicit open (double-click, menu, deep link…) makes a preview tab
+    // permanent.
+    if (store.previewTabId === existing.id) store.setPreviewTab(null);
     requestGitBaseline(existing.id, path);
     return existing.id;
   }
@@ -35,6 +38,7 @@ export async function openFileByPath(path: string): Promise<number | null> {
   if (raced) {
     latest.setActiveTab(raced.id);
     latest.setSelectedPath(path);
+    if (latest.previewTabId === raced.id) latest.setPreviewTab(null);
     requestGitBaseline(raced.id, path);
     return raced.id;
   }
@@ -56,10 +60,39 @@ export async function openFileByPath(path: string): Promise<number | null> {
   return id;
 }
 
+// Single-click entry point from the file browser: open the file in the
+// preview (temporary) tab. Only one preview tab exists — clicking another file
+// closes the previous preview and opens the new one. The tab itself is created
+// EXACTLY like a double-click (openFileByPath / addTab, no preview-specific
+// styling or extra state), and is promoted to a permanent tab when edited or
+// explicitly opened (double-click).
+export async function previewFileByPath(path: string): Promise<number | null> {
+  const store = useStore.getState();
+  // If the file is already open, focus it without changing its status.
+  const existing = store.tabs.find((t) => t.filePath === path);
+  if (existing) {
+    store.setActiveTab(existing.id);
+    store.setSelectedPath(path);
+    requestGitBaseline(existing.id, path);
+    return existing.id;
+  }
+  // A stray click on a non-text file is silently ignored (no toast).
+  if (!isOpenable(path)) return null;
+  // Replace the previous preview tab, then open the new file through the same
+  // path as the "+" (new tab) button and double-click.
+  const previewId = store.previewTabId;
+  if (previewId != null && store.tabs.some((t) => t.id === previewId)) {
+    store.closeTab(previewId);
+  }
+  const id = await openFileByPath(path);
+  if (id != null) store.setPreviewTab(id);
+  return id;
+}
+
 // Entry point for single clicks in the file browser. Non-openable files are
 // silently ignored (a click is not an explicit "open this"), and anything over
 // the size cap is refused up front so a stray click cannot pull a huge file
-// into memory — openFileByPath reads the whole file with no such check.
+// into memory — previewFileByPath reads the whole file with no such check.
 export async function openFileFromBrowser(path: string): Promise<void> {
   if (!isOpenable(path)) return;
   const stat = await getFileSystem().fileStat(path).catch(() => null);
@@ -72,7 +105,7 @@ export async function openFileFromBrowser(path: string): Promise<void> {
       );
     return;
   }
-  await openFileByPath(path);
+  await previewFileByPath(path);
 }
 
 export function requestGitBaseline(id: number, path: string) {

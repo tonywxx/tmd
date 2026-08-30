@@ -16,7 +16,7 @@ import { useStore } from "../lib/store";
 import { confirmDialog, messageDialog } from "../lib/bridge";
 import { getFileSystem } from "../lib/fs";
 import { openFileByPath, openFileFromBrowser } from "../lib/fileops";
-import { isMarkdown, isOpenable } from "../lib/constants";
+import { isOpenable } from "../lib/constants";
 import { basename, dirname, join } from "../lib/pathutil";
 import { type Favorite, type FileEntry, type SortMode } from "../lib/types";
 import { sortEntries, SORT_LABELS, isFavorite } from "../lib/fileBrowserModel";
@@ -195,14 +195,18 @@ export default function FileBrowser() {
           "fb-row" +
           (selectedPath === entry.path ? " selected" : "") +
           (isDir ? " is-dir" : "") +
-          (isOpenableFile ? " is-openable" : "") +
-          (isOpenableFile && isMarkdown(entry.path) ? " is-md" : "")
+          (isOpenableFile ? " is-openable" : "")
         }
         style={{ paddingLeft: pad }}
         onClick={() => {
           setSelectedPath(entry.path);
           if (isDir) toggleDir(entry.path);
+          // Single click opens in the preview tab (reused, not accumulated).
           else if (isOpenableFile) void openFileFromBrowser(entry.path);
+        }}
+        onDoubleClick={() => {
+          // Double-click opens a permanent tab (promotes the preview).
+          if (!isDir && isOpenableFile) void openFileByPath(entry.path);
         }}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -321,6 +325,7 @@ export default function FileBrowser() {
               }}
               onDoubleClick={() => {
                 if (f.type === "directory") setFolderPath(f.path);
+                else void openFileByPath(f.path);
               }}
               onContextMenu={(e) => {
                 e.preventDefault();

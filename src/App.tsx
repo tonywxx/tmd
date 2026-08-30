@@ -244,6 +244,10 @@ export default function App() {
     await on("menu-copy", () => void executeCommand("copy"));
     await on("menu-paste", () => void executeCommand("paste"));
     await on("menu-select-all", () => void executeCommand("select-all"));
+    await on("menu-find", () => void executeCommand("find"));
+    await on("menu-find-next", () => void executeCommand("find-next"));
+    await on("menu-find-previous", () => void executeCommand("find-previous"));
+    await on("menu-replace", () => void executeCommand("replace"));
     await on("menu-copy-file-content", () => void executeCommand("copy-file-content"));
     await on("menu-copy-selection-with-context", () => void executeCommand("copy-selection-with-context"));
     await on("menu-find-in-folder", () => void executeCommand("find-in-folder"));

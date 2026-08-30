@@ -71,10 +71,19 @@ export interface ShellSlice {
 export interface TabsSlice {
   tabs: Tab[];
   activeTabId: number | null;
+  /**
+   * Id of the current preview (temporary) tab, or null. A preview tab is a
+   * file opened by a single click in the file browser: it gets reused when the
+   * user single-clicks another file, and promoted to a permanent tab when it is
+   * edited or explicitly opened (double-click, menu, Save As).
+   */
+  previewTabId: number | null;
   nextTabId: number;
   addTab: (tab: Omit<Tab, "id">) => number;
   closeTab: (id: number) => void;
   setActiveTab: (id: number) => void;
+  setPreviewTab: (id: number | null) => void;
+  /** Promote a preview tab to permanent (clear previewTabId). */
   updateTabContent: (id: number, content: string) => void;
   setTabSaved: (id: number, savedContent: string) => void;
   setTabName: (id: number, name: string | null, filePath: string | null) => void;

@@ -7,6 +7,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (
 ) => ({
   tabs: [],
   activeTabId: null,
+  previewTabId: null,
   nextTabId: 1,
   addTab: (tab) => {
     const id = get().nextTabId;
@@ -40,7 +41,11 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (
         else activeTabId = tabs[Math.min(idx, tabs.length - 1)].id;
       }
       const active = tabs.find((t) => t.id === activeTabId);
-      return { tabs, activeTabId, selectedPath: active?.filePath ?? null };
+      // Closing the preview tab clears the preview slot; the next single click
+      // in the browser starts a fresh preview tab.
+      const previewTabId =
+        state.previewTabId === id ? null : state.previewTabId;
+      return { tabs, activeTabId, selectedPath: active?.filePath ?? null, previewTabId };
     }),
   // Untitled / URL-backed tabs have no path, so they clear the selection.
   setActiveTab: (id) =>
@@ -48,14 +53,21 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (
       activeTabId: id,
       selectedPath: state.tabs.find((t) => t.id === id)?.filePath ?? null,
     })),
+  setPreviewTab: (id) => set({ previewTabId: id }),
   updateTabContent: (id, content) =>
-    set((state) => ({
-      tabs: state.tabs.map((t) =>
+    set((state) => {
+      const tabs = state.tabs.map((t) =>
         t.id === id
           ? { ...t, content, dirty: content !== t.savedContent }
           : t,
-      ),
-    })),
+      );
+      // Editing a preview tab promotes it to a permanent tab (VS Code-style
+      // preview: a transient tab becomes real once the user starts typing).
+      const t = tabs.find((x) => x.id === id);
+      const previewTabId =
+        t?.dirty && state.previewTabId === id ? null : state.previewTabId;
+      return { tabs, previewTabId };
+    }),
   setTabSaved: (id, savedContent) =>
     set((state) => ({
       tabs: state.tabs.map((t) =>
@@ -63,11 +75,18 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (
       ),
     })),
   setTabName: (id, name, filePath) =>
-    set((state) => ({
-      tabs: state.tabs.map((t) =>
-        t.id === id ? { ...t, name, filePath } : t,
-      ),
-    })),
+    set((state) => {
+      // Save As is an explicit action, so a preview tab saved under a new
+      // path becomes permanent.
+      const previewTabId =
+        state.previewTabId === id ? null : state.previewTabId;
+      return {
+        tabs: state.tabs.map((t) =>
+          t.id === id ? { ...t, name, filePath } : t,
+        ),
+        previewTabId,
+      };
+    }),
   getActiveTab: () => {
     const { tabs, activeTabId } = get();
     return tabs.find((t) => t.id === activeTabId) ?? null;

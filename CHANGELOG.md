@@ -5,6 +5,14 @@ release first. Version tags follow [Semantic Versioning](https://semver.org/).
 本项目所有重要变更均在此以英文与中文双语记录，最新版本在前。版本号遵循语义化版本规范。
 
 ---
+## [v0.3.1] - 2026-08-29
+
+- Implemented find and replace features in the editor, including keyboard shortcuts and UI integration.
+- Enhanced the file browser to support single and double-click actions for file opening.
+- Improved the scroll synchronization between the editor and preview, utilizing data-line attributes for accurate mapping.
+- Added styling for search and replace panels in the editor.
+- Updated state management to handle preview tabs more effectively.
+
 ## [v0.3.0] - 2026-08-28
 
 feat: Refactor file browser to support openable file types and improve user experience
@@ -27,7 +35,6 @@ feat: Refactor file browser to support openable file types and improve user expe
   app chrome, so the editor and preview share one color scheme.
 - Fixed the editor losing focus after the first keystroke: typing no longer
   rebuilds the editor view, so the caret stays put and the editor keeps focus.
-
 
 ## [v0.2.9] - 2026-08-28
 

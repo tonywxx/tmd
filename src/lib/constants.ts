@@ -1,7 +1,6 @@
 import type { AccentColor, MarkdownTheme, Settings } from "./types";
 
 // ---- Timings ----
-export const SYNC_COOLDOWN_MS = 80; // scroll-sync feedback guard
 export const ANCHOR_REBUILD_MS = 50; // rebuild anchor map after content change
 export const PREVIEW_DEBOUNCE_MS = 150; // preview render debounce
 export const DIFF_MERGE_THRESHOLD = 2; // merge short context gaps into a hunk

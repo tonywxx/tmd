@@ -54,15 +54,20 @@ export async function renderMermaidBlocks(container: HTMLElement): Promise<void>
 }
 
 async function replaceBlock(pre: HTMLElement, source: string): Promise<void> {
+  const line = pre.dataset.line;
   try {
     const diagram = await renderMermaid(source);
     if (!pre.isConnected) return;
     const figure = buildFigure(diagram, source);
+    // Keep the block's source line marker so the scroll sync still anchors on
+    // this block after the <pre> is replaced by the diagram figure.
+    if (line) figure.dataset.line = line;
     pre.replaceWith(figure);
   } catch (err) {
     if (!pre.isConnected) return;
     const figure = document.createElement("div");
     figure.className = "mermaid-figure mermaid-error";
+    if (line) figure.dataset.line = line;
     const msg = document.createElement("div");
     msg.className = "mermaid-error-msg";
     msg.textContent = `Mermaid render error: ${String(err)}`;

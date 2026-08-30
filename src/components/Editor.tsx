@@ -15,6 +15,14 @@ import {
 } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { languages } from "@codemirror/language-data";
+import {
+	findNext,
+	findPrevious,
+	highlightSelectionMatches,
+	openSearchPanel,
+	search,
+	searchKeymap,
+} from "@codemirror/search";
 import type { Extension } from "@codemirror/state";
 import {
 	Compartment,
@@ -32,6 +40,7 @@ import {
 	highlightActiveLine,
 	keymap,
 	lineNumbers,
+	type Command,
 } from "@codemirror/view";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useRef } from "react";
@@ -65,6 +74,20 @@ class ChangedMarker extends GutterMarker {
 	}
 }
 const changedMarker = new ChangedMarker();
+
+// The search panel always carries the replace input for editable documents, so
+// "Replace…" just opens the panel and moves focus to the replacement field.
+// (The native menu owns Mod-Alt-f on macOS; this binding is the in-editor
+// fallback for platforms where the menu does not intercept the key.)
+const openReplacePanel: Command = (view) => {
+	if (!openSearchPanel(view)) return true;
+	const replaceField = view.dom.querySelector<HTMLInputElement>(
+		'input[name="replace"]',
+	);
+	replaceField?.focus();
+	replaceField?.select();
+	return true;
+};
 
 // Forces the changed-lines gutter to recompute after the git baseline for the
 // active file resolves asynchronously (the baseline lives in gitBaselineRef).
@@ -152,13 +175,74 @@ function themeExtension(settings: Settings): Extension {
 				color: "var(--accent)",
 				fontSize: "8px",
 			},
-			".cm-scroller": {
-				fontFamily: font,
-				lineHeight: "1.6",
+		".cm-scroller": {
+			fontFamily: font,
+			lineHeight: "1.6",
+		},
+		// Search / replace panel: reskin the CodeMirror base theme (which paints
+		// a silver-grey bar in light mode and #333 in dark) on the app palette.
+		// theme() rules are mounted after baseTheme, so these win.
+		".cm-panels": {
+			backgroundColor: "var(--bg-panel)",
+			color: "var(--text)",
+			fontSize: "13px",
+		},
+		".cm-panels-bottom": {
+			borderTop: "1px solid var(--border)",
+		},
+		".cm-panels-top": {
+			borderBottom: "1px solid var(--border)",
+		},
+		".cm-panel.cm-search": {
+			padding: "5px 8px",
+		},
+		".cm-panel.cm-search .cm-textfield": {
+			backgroundColor: "var(--bg-elevated)",
+			color: "var(--text)",
+			border: "1px solid var(--border)",
+			borderRadius: "6px",
+			padding: "3px 8px",
+			fontSize: "13px",
+			"&:focus": {
+				outline: "none",
+				borderColor: "var(--accent)",
 			},
 		},
-		{ dark: isDark },
-	);
+		".cm-panel.cm-search .cm-button": {
+			backgroundColor: "var(--bg-elevated)",
+			color: "var(--text)",
+			border: "1px solid var(--border)",
+			borderRadius: "6px",
+			padding: "2px 8px",
+			fontSize: "12px",
+			cursor: "pointer",
+			"&:hover": {
+				backgroundColor: "var(--row-hover)",
+			},
+		},
+		".cm-panel.cm-search label": {
+			color: "var(--text-dim)",
+			fontSize: "12px",
+		},
+		".cm-panel.cm-search input[type=checkbox]": {
+			accentColor: "var(--accent)",
+		},
+		// Search + selection match highlights, tinted on the accent so they read
+		// on both light and dark surfaces.
+		".cm-searchMatch": {
+			backgroundColor: "color-mix(in srgb, var(--accent) 18%, transparent)",
+			outline: "1px solid color-mix(in srgb, var(--accent) 45%, transparent)",
+		},
+		".cm-searchMatch.cm-searchMatch-selected": {
+			backgroundColor:
+				"color-mix(in srgb, var(--accent) 42%, transparent)",
+		},
+		".cm-selectionMatch": {
+			backgroundColor: "color-mix(in srgb, var(--accent) 16%, transparent)",
+		},
+	},
+	{ dark: isDark },
+);
 }
 
 // CodeMirror's defaultHighlightStyle hardcodes light-theme token colors (URLs
@@ -360,6 +444,10 @@ export default function Editor() {
 			updateGitMarkers: () => {
 				view.dispatch({ effects: setBaselineEffect.of(null) });
 			},
+			openSearchPanel: () => openSearchPanel(view),
+			openReplacePanel: () => openReplacePanel(view),
+			findNext: () => findNext(view),
+			findPrevious: () => findPrevious(view),
 			replaceContent: (content: string) => {
 				view.dispatch({
 					changes: { from: 0, to: view.state.doc.length, insert: content },
@@ -511,6 +599,8 @@ function buildExtensions(
 
 	return [
 		clipboardHandlers,
+		search(),
+		highlightSelectionMatches(),
 		lineNumbersComp.of(settings.showLineNumbers ? lineNumbers() : []),
 		history(),
 		drawSelection(),
@@ -527,7 +617,14 @@ function buildExtensions(
 		// Not a fallback: an unstyled token inherits the (readable) surface text
 		// color, whereas defaultHighlightStyle would repaint it light-theme-only.
 		syntaxHighlighting(editorHighlightStyle),
-		keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+		keymap.of([
+			...defaultKeymap,
+			...historyKeymap,
+			indentWithTab,
+			...searchKeymap,
+			// "Replace…" opens the search panel focused on the replacement field.
+			{ key: "Mod-Alt-f", run: openReplacePanel },
+		]),
 		themeComp.of(themeExtension(settings)),
 		updateListener,
 		...buildChangedGutter(getBaseline),

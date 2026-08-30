@@ -21,6 +21,11 @@ export interface EditorPort {
   cutSelection: () => void;
   paste: (text: string) => void;
   navigateToLine: (line: number) => void;
+  // Find & replace — backed by the CodeMirror search panel.
+  openSearchPanel: () => void;
+  openReplacePanel: () => void;
+  findNext: () => void;
+  findPrevious: () => void;
 }
 
 let activePort: EditorPort | null = null;
