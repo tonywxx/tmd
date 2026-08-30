@@ -63,7 +63,13 @@ export default function WorkspaceToolbar() {
     <div className="format-bar workspace-toolbar" data-tauri-drag-region="deep">
       <div className="tb-group format-group">
         {FORMAT_BUTTONS.map((b) => (
-          <button key={b.action} className="tb-btn" title={b.title} onClick={() => fmt(b.action)}>
+          <button
+            key={b.action}
+            className="tb-btn"
+            title={b.title}
+            data-tauri-drag-region="false"
+            onClick={() => fmt(b.action)}
+          >
             {b.label}
           </button>
         ))}
@@ -79,6 +85,7 @@ export default function WorkspaceToolbar() {
             aria-checked={selected === v.value}
             className={"tb-btn" + (selected === v.value ? " active" : "")}
             title={v.title}
+            data-tauri-drag-region="false"
             onClick={() => selectView(v.value)}
           >
             {v.label}
@@ -87,10 +94,20 @@ export default function WorkspaceToolbar() {
       </div>
 
       <div className="tb-group">
-        <button className="tb-btn" title="Markdown Help" onClick={() => void executeCommand("help")}>
+        <button
+          className="tb-btn"
+          title="Markdown Help"
+          data-tauri-drag-region="false"
+          onClick={() => void executeCommand("help")}
+        >
           <Icon icon={HelpCircle} />
         </button>
-        <button className="tb-btn" title="Settings" onClick={() => void executeCommand("settings")}>
+        <button
+          className="tb-btn"
+          title="Settings"
+          data-tauri-drag-region="false"
+          onClick={() => void executeCommand("settings")}
+        >
           <Icon icon={Settings} />
         </button>
       </div>

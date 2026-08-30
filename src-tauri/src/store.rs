@@ -83,6 +83,7 @@ fn merge_settings(existing: Settings) -> Settings {
         font_size: if existing.font_size == 0 { d.font_size } else { existing.font_size },
         font_family: if existing.font_family.is_empty() { d.font_family } else { existing.font_family },
         preview_font_family: if existing.preview_font_family.is_empty() { d.preview_font_family } else { existing.preview_font_family },
+        preview_font_size: if existing.preview_font_size == 0 { d.preview_font_size } else { existing.preview_font_size },
         show_line_numbers: existing.show_line_numbers,
         auto_save: existing.auto_save,
         auto_save_delay: if existing.auto_save_delay == 0 { d.auto_save_delay } else { existing.auto_save_delay },

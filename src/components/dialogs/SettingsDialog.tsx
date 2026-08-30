@@ -160,6 +160,20 @@ export default function SettingsDialog() {
 							))}
 						</select>
 
+						<label>Preview Font Size</label>
+						<select
+							value={settings.previewFontSize}
+							onChange={(e) =>
+								apply({ previewFontSize: Number(e.target.value) })
+							}
+						>
+							{FONT_SIZE_OPTIONS.map((f) => (
+								<option key={f} value={f}>
+									{f}
+								</option>
+							))}
+						</select>
+
 						<label>Markdown Theme</label>
 						<select
 							value={settings.markdownTheme}
@@ -178,6 +192,7 @@ export default function SettingsDialog() {
 						<div className="md-theme-preview">
 							<div
 								className={"markdown-body theme-" + settings.markdownTheme}
+								style={{ fontSize: `${settings.previewFontSize}px` }}
 								dangerouslySetInnerHTML={{ __html: previewHtml }}
 							/>
 						</div>

@@ -60,6 +60,7 @@ export interface Settings {
   fontSize: number;
   fontFamily: string;
   previewFontFamily: string;
+  previewFontSize: number;
   showLineNumbers: boolean;
   autoSave: boolean;
   autoSaveDelay: number;

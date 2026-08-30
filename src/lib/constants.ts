@@ -114,6 +114,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontSize: 14,
   fontFamily: "default",
   previewFontFamily: "default",
+  previewFontSize: 14,
   showLineNumbers: true,
   autoSave: false,
   autoSaveDelay: 5000,

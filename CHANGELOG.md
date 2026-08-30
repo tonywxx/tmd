@@ -5,6 +5,11 @@ release first. Version tags follow [Semantic Versioning](https://semver.org/).
 本项目所有重要变更均在此以英文与中文双语记录，最新版本在前。版本号遵循语义化版本规范。
 
 ---
+## [v0.3.2] - 2026-08-30
+
+- Add preview font size setting
+- Minor bug fixes
+
 ## [v0.3.1] - 2026-08-29
 
 - Implemented find and replace features in the editor, including keyboard shortcuts and UI integration.

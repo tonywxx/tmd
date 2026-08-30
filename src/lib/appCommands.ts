@@ -215,11 +215,14 @@ export function registerAppCommands(): void {
 		if (tab.dirty) {
 			st.setDiffData(buildDiff(p.path, tab.content, p.content));
 			st.pushToast("File changed on disk — merge needed", "warning");
-		} else {
+		} else if (p.content !== tab.content) {
 			// The file already contains `content` on disk; reconcile the tab and
 			// the editor document without writing anything back.
 			void syncFromDisk(tab.id, p.path, p.content);
 		}
+		// When p.content === tab.content the event is our own save/autosave echo:
+		// the editor already holds this text, so reloading would replace the whole
+		// document (Editor.tsx replaceContent) and map the caret to position 0.
 	});
 	registerCommand("directory-changed", (payload) => {
 		const p = payload as { path: string };
