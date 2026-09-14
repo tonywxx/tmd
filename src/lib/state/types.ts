@@ -24,6 +24,13 @@ export type UpdateStatus = "idle" | "downloading" | "ready" | "error";
 // ---- Shell slice — App shell context ----
 // Windows, menus, tabs-as-UI, dialogs, session, settings, toasts
 // (see CONTEXT.md "App shell context").
+export type DialogKind =
+  | "settings"
+  | "about"
+  | "openPath"
+  | "openUrl"
+  | "findInFolder";
+
 export interface ShellSlice {
   settings: Settings;
   setSettings: (s: Settings) => void;
@@ -36,21 +43,13 @@ export interface ShellSlice {
   setFocusMode: (v: boolean) => void;
   setSidebarVisible: (v: boolean) => void;
 
-  settingsOpen: boolean;
-  aboutOpen: boolean;
-  openPathOpen: boolean;
-  openUrlOpen: boolean;
-  findInFolderOpen: boolean;
+  dialogs: Record<DialogKind, boolean>;
   diffData: DiffData | null;
   updateInfo: UpdateInfo | null;
   updateStatus: UpdateStatus;
   updateProgress: { downloaded: number; total: number | null };
   updateArchivePath: string | null;
-  setSettingsOpen: (v: boolean) => void;
-  setAboutOpen: (v: boolean) => void;
-  setOpenPathOpen: (v: boolean) => void;
-  setOpenUrlOpen: (v: boolean) => void;
-  setFindInFolderOpen: (v: boolean) => void;
+  setDialog: (kind: DialogKind, v: boolean) => void;
   setDiffData: (d: DiffData | null) => void;
   setUpdateInfo: (u: UpdateInfo | null) => void;
   setUpdateStatus: (s: UpdateStatus) => void;

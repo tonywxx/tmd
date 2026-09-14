@@ -1,7 +1,7 @@
 import { Plus, X, Sidebar, Link } from "lucide-react";
 import { Icon } from "./Icon";
 import { useStore } from "../lib/store";
-import { newUntitledTab } from "../lib/fileops";
+import { newUntitledTab } from "../lib/document";
 
 export default function TabBar() {
   const tabs = useStore((s) => s.tabs);

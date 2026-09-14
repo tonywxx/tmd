@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../lib/store";
-import { openFileFromUrl } from "../../lib/fileops";
+import { openFileFromUrl } from "../../lib/document";
 import { claimClipboardOp } from "../../lib/editorPort";
 import { snapshotEditable, insertIntoEditable } from "../../lib/nativeInput";
 
 export default function OpenUrlModal() {
-  const setOpen = useStore((s) => s.setOpenUrlOpen);
+  const setDialog = useStore((s) => s.setDialog);
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -21,11 +21,11 @@ export default function OpenUrlModal() {
     setLoading(true);
     const id = await openFileFromUrl(url.trim());
     setLoading(false);
-    if (id != null) setOpen(false);
+    if (id != null) setDialog("openUrl", false);
   }
 
   return (
-    <div className="modal-backdrop" onClick={() => setOpen(false)}>
+    <div className="modal-backdrop" onClick={() => setDialog("openUrl", false)}>
       <div className="modal openpath-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">Open from URL</div>
         <div className="modal-body">
@@ -58,7 +58,7 @@ export default function OpenUrlModal() {
           />
         </div>
         <div className="modal-footer">
-          <button className="btn" onClick={() => setOpen(false)} disabled={loading}>
+          <button className="btn" onClick={() => setDialog("openUrl", false)} disabled={loading}>
             Cancel
           </button>
           <button className="btn primary" onClick={open} disabled={loading || !url.trim()}>

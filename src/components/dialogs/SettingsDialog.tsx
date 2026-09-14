@@ -20,7 +20,7 @@ const GLOBAL_HOTKEY_KEYS: (keyof Settings)[] = [
 
 export default function SettingsDialog() {
 	const settings = useStore((s) => s.settings);
-	const setSettingsOpen = useStore((s) => s.setSettingsOpen);
+	const setDialog = useStore((s) => s.setDialog);
 	const updateSettings = useStore((s) => s.updateSettings);
 
 	// Sample document for the live markdown-theme preview.
@@ -73,7 +73,7 @@ export default function SettingsDialog() {
 	}
 
 	function close() {
-		setSettingsOpen(false);
+		setDialog("settings", false);
 	}
 
 	async function cancel() {
@@ -85,7 +85,7 @@ export default function SettingsDialog() {
 		} catch {
 			/* ignore revert failures */
 		}
-		setSettingsOpen(false);
+		setDialog("settings", false);
 	}
 
 	return (

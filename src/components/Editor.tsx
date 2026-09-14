@@ -54,7 +54,7 @@ import {
 import { applyFormatting } from "../lib/formatActions";
 import { isMarkdown } from "../lib/constants";
 import { basename } from "../lib/pathutil";
-import { persistTab } from "../lib/persist";
+import { persistTab } from "../lib/document";
 import {
 	autoSaveTimers,
 	editorStatesRef,

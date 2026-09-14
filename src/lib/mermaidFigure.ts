@@ -1,22 +1,16 @@
-import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Minimize2, Download, Code, Eye } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Download, Code, Eye } from "lucide-react";
 import { lucideSvg } from "./iconSvg";
-import { nextMermaidId, renderMermaid, svgToPngDataUri } from "./mermaid";
-import { pickSaveImagePath } from "./bridge";
-import { getFileSystem } from "./fs";
-import { useStore } from "./store";
-import {
-  identityTransform,
-  zoomAt,
-  pan,
-  transformStyle,
-  type ViewTransform,
-} from "./zoomTransform";
+import { nextMermaidId, renderMermaid } from "./mermaid";
+import { setupPanZoom } from "./mermaidPanZoom";
+import { setupSave } from "./mermaidSave";
+import { setupFullscreen } from "./mermaidFullscreen";
 
 // Builds the interactive diagram figure (viewport + toolbar) that replaces a
 // ```mermaid code block in the preview, and wires up:
-//   - wheel zoom (anchored at the cursor)
-//   - drag to pan in any direction
-//   - toolbar buttons: zoom in / zoom out / reset / save as PNG
+//   - wheel zoom (anchored at the cursor) + drag pan  → mermaidPanZoom.ts
+//   - toolbar: zoom in/out/reset, code toggle, fullscreen → mermaidFullscreen.ts,
+//     save as PNG → mermaidSave.ts
+// Public interface unchanged: callers only use renderMermaidBlocks.
 
 export async function renderMermaidBlocks(container: HTMLElement): Promise<void> {
   // (1) Replace any not-yet-rendered ```mermaid code blocks.
@@ -114,181 +108,6 @@ function buildFigure(diagram: { id: string; svg: string; bind: (el: HTMLElement)
   return figure;
 }
 
-function setupPanZoom(
-  figure: HTMLElement,
-  viewport: HTMLElement,
-  inner: HTMLElement,
-): void {
-  let t: ViewTransform = identityTransform();
-  let dragging = false;
-  let startX = 0;
-  let startY = 0;
-  let startT: ViewTransform = identityTransform();
-
-  const apply = () => {
-    inner.style.transform = transformStyle(t);
-    inner.style.transformOrigin = "0 0";
-  };
-
-  const zoomAtPoint = (cx: number, cy: number, factor: number) => {
-    t = zoomAt(t, cx, cy, t.k * factor);
-    apply();
-  };
-
-  viewport.addEventListener(
-    "wheel",
-    (e) => {
-      e.preventDefault();
-      const rect = viewport.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
-      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      zoomAtPoint(cx, cy, factor);
-    },
-    { passive: false },
-  );
-
-  viewport.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    const target = e.target as HTMLElement;
-    if (target.closest("a, button")) return;
-    dragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    startT = t;
-    viewport.setPointerCapture(e.pointerId);
-    viewport.classList.add("dragging");
-    e.preventDefault();
-  });
-
-  viewport.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    t = pan(startT, e.clientX - startX, e.clientY - startY);
-    apply();
-  });
-
-  const endDrag = (e: PointerEvent) => {
-    if (!dragging) return;
-    dragging = false;
-    try {
-      viewport.releasePointerCapture(e.pointerId);
-    } catch {
-      /* capture may already be released */
-    }
-    viewport.classList.remove("dragging");
-  };
-  viewport.addEventListener("pointerup", endDrag);
-  viewport.addEventListener("pointercancel", endDrag);
-
-  const zoomButton = (action: string, factor: number) => {
-    figure
-      .querySelector(`[data-action="${action}"]`)
-      ?.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const rect = viewport.getBoundingClientRect();
-        zoomAtPoint(rect.width / 2, rect.height / 2, factor);
-      });
-  };
-  zoomButton("zoom-in", 1.3);
-  zoomButton("zoom-out", 1 / 1.3);
-
-  figure
-    .querySelector('[data-action="reset"]')
-    ?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      t = identityTransform();
-      apply();
-    });
-}
-
-function setupSave(btn: HTMLButtonElement | null, source: string): void {
-  if (!btn) return;
-  btn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.textContent = "…";
-    try {
-      const figure = btn.closest(".mermaid-figure") as HTMLElement | null;
-      const svg = figure?.querySelector("svg") as SVGSVGElement | null;
-      if (!svg) throw new Error("diagram not rendered");
-      const dataUrl = await svgToPngDataUri(svg, 2);
-      const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-      const firstLine = source.trim().split("\n")[0] ?? "diagram";
-      const stem =
-        firstLine
-          .replace(/[^\w\u4e00-\u9fff-]+/g, "_")
-          .replace(/^_+|_+$/g, "")
-          .slice(0, 40) || "mermaid";
-      const path = await pickSaveImagePath(`${stem}.png`);
-      if (!path) return;
-      await getFileSystem().writeFileBase64(path, base64);
-      useStore.getState().pushToast(`Saved diagram → ${path}`, "success");
-    } catch (err) {
-      console.error("save diagram failed", err);
-      useStore.getState().pushToast(`Save failed: ${String(err)}`, "error");
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = lucideSvg(Download);
-    }
-  });
-}
-
-// Module-level fullscreen state. At most one figure is fullscreen at a time;
-// a single document-level Escape listener is attached while one is active and
-// torn down when the last figure exits, so we never leak listeners.
-let fsCurrent: { figure: HTMLElement; btn: HTMLButtonElement } | null = null;
-let fsEscHandler: ((e: KeyboardEvent) => void) | null = null;
-
-function applyFullscreenState(
-  figure: HTMLElement,
-  btn: HTMLButtonElement,
-  on: boolean,
-): void {
-  figure.classList.toggle("is-fullscreen", on);
-  btn.innerHTML = lucideSvg(on ? Minimize2 : Maximize2);
-  btn.title = on ? "Exit fullscreen" : "Enter fullscreen";
-  btn.setAttribute("aria-label", btn.title);
-}
-
-function setFullscreen(
-  figure: HTMLElement,
-  btn: HTMLButtonElement,
-  on: boolean,
-): void {
-  if (on) {
-    // If a different figure is already fullscreen, collapse it first.
-    if (fsCurrent && fsCurrent.figure !== figure) {
-      applyFullscreenState(fsCurrent.figure, fsCurrent.btn, false);
-    }
-    fsCurrent = { figure, btn };
-    applyFullscreenState(figure, btn, true);
-    if (!fsEscHandler) {
-      fsEscHandler = (ev) => {
-        if (ev.key !== "Escape" || !fsCurrent) return;
-        const { figure: f, btn: b } = fsCurrent;
-        if (f.isConnected) applyFullscreenState(f, b, false);
-        fsCurrent = null;
-        document.removeEventListener("keydown", fsEscHandler!);
-        fsEscHandler = null;
-      };
-      document.addEventListener("keydown", fsEscHandler);
-    }
-  } else {
-    applyFullscreenState(figure, btn, false);
-    if (fsCurrent && fsCurrent.figure === figure) {
-      fsCurrent = null;
-      if (fsEscHandler) {
-        document.removeEventListener("keydown", fsEscHandler);
-        fsEscHandler = null;
-      }
-    }
-  }
-}
-
 function setupToggleCode(btn: HTMLButtonElement | null, figure: HTMLElement): void {
   if (!btn) return;
   btn.addEventListener("click", (e) => {
@@ -299,18 +118,5 @@ function setupToggleCode(btn: HTMLButtonElement | null, figure: HTMLElement): vo
     btn.innerHTML = lucideSvg(on ? Eye : Code);
     btn.title = on ? "Show diagram" : "Show code";
     btn.setAttribute("aria-label", btn.title);
-  });
-}
-
-function setupFullscreen(
-  btn: HTMLButtonElement | null,
-  figure: HTMLElement,
-): void {
-  if (!btn) return;
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const on = !figure.classList.contains("is-fullscreen");
-    setFullscreen(figure, btn, on);
   });
 }

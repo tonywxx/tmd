@@ -1,4 +1,10 @@
 import { EditorView } from "@codemirror/view";
+import {
+  locateAnchorByLine,
+  interpolate,
+  fractionToLine,
+  type Anchor,
+} from "./anchorMap";
 
 // Bidirectional scroll sync between the editor and the preview.
 //
@@ -18,14 +24,7 @@ import { EditorView } from "@codemirror/view";
 
 const TARGET_SUPPRESS_MS = 50;
 
-interface Anchor {
-  el: Element;
-  line: number;
-}
-
-function clamp01(n: number): number {
-  return Math.max(0, Math.min(1, n));
-}
+// (Anchor type + clamp01 + binary searches now live in anchorMap.ts.)
 
 // Element's top relative to the scrollable content of `scroller` (0 = scroller
 // top when scrollTop is 0). Uses bounding rects so offsetParent quirks don't
@@ -173,58 +172,53 @@ export class ScrollSync {
 
   // Editor → preview: map the first visible editor line onto the preview by
   // interpolating between the two anchors that bound the line.
+  // (Numerics live in anchorMap.ts; here only DOM measurement + delegation.)
   private editorToPreviewTarget(
     view: EditorView,
     topLine: number,
     anchors: Anchor[],
     preview: HTMLElement,
   ): number | null {
-    // Greatest index whose line is <= topLine (anchors are in source order).
-    let lo = 0;
-    let hi = anchors.length - 1;
-    let i = -1;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      if (anchors[mid].line <= topLine) {
-        i = mid;
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
+    // Binary search on lines needs no layout reads; only the two bounding
+    // anchors are measured — same cost as before, numerics in anchorMap.
+    const i = locateAnchorByLine(
+      anchors.map((a) => a.line),
+      topLine,
+    );
     if (i < 0) return null;
-
     const doc = view.state.doc;
-    const curLine = anchors[i].line;
     const nextLine = i + 1 < anchors.length ? anchors[i + 1].line : doc.lines;
-    const span = nextLine - curLine;
-    const frac = span > 0 ? clamp01((topLine - curLine) / span) : 0;
-
     const curTop = elementTopInScroller(anchors[i].el, preview);
     const nextTop =
       i + 1 < anchors.length
         ? elementTopInScroller(anchors[i + 1].el, preview)
         : preview.scrollHeight - preview.clientHeight;
-    return curTop + frac * (nextTop - curTop);
+    return interpolate(anchors[i].line, nextLine, topLine, curTop, nextTop);
   }
 
   // Preview → editor: locate the block in view by its anchor, map the preview
   // scroll fraction within the block back to an editor line.
+  // (Numerics live in anchorMap.ts; here only DOM measurement + delegation.
+  // NOTE: tops are monotonic in document order, so one layout read per
+  // anchor is still the cost — unchanged from before.)
   private previewToEditorTarget(
     view: EditorView,
     anchors: Anchor[],
     scrollTop: number,
     preview: HTMLElement,
   ): number | null {
-    // Last anchor whose top is at/above the viewport top (tops are monotonic
-    // in document order, so a binary search needs only log n layout reads).
+    // Tops are monotonic in document order: binary-search with one layout
+    // read per probe (log n reads), then a single pure fractionToLine call.
+    // Only the winning section's endpoints are re-read — same as before.
     let lo = 0;
     let hi = anchors.length - 1;
     let i = -1;
+    const tops: number[] = new Array(anchors.length);
+    const topAt = (k: number): number =>
+      (tops[k] ??= elementTopInScroller(anchors[k].el, preview));
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      const top = elementTopInScroller(anchors[mid].el, preview);
-      if (top <= scrollTop + 1) {
+      if (topAt(mid) <= scrollTop + 1) {
         i = mid;
         lo = mid + 1;
       } else {
@@ -232,22 +226,20 @@ export class ScrollSync {
       }
     }
     if (i < 0) return null;
-
     const doc = view.state.doc;
-    const curLine = anchors[i].line;
     const nextLine = i + 1 < anchors.length ? anchors[i + 1].line : doc.lines;
-    const span = nextLine - curLine;
-    const sectionStart = elementTopInScroller(anchors[i].el, preview);
+    const sectionStart = topAt(i);
     const sectionEnd =
       i + 1 < anchors.length
-        ? elementTopInScroller(anchors[i + 1].el, preview)
+        ? topAt(i + 1)
         : preview.scrollHeight - preview.clientHeight;
-    const frac =
-      sectionEnd > sectionStart
-        ? clamp01((scrollTop - sectionStart) / (sectionEnd - sectionStart))
-        : 0;
-
-    const targetLine = span > 0 ? curLine + frac * span : curLine;
+    const targetLine = fractionToLine(
+      anchors[i].line,
+      nextLine,
+      scrollTop,
+      sectionStart,
+      sectionEnd,
+    );
     const lineNo = Math.max(1, Math.min(Math.round(targetLine), doc.lines));
     const line = doc.line(lineNo);
     const block = view.lineBlockAt(line.from);

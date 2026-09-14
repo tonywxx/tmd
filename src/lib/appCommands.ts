@@ -4,22 +4,21 @@ import { getBackend } from "./backend";
 import { registerCommand } from "./commands";
 import { buildDiff } from "./diff";
 import {
+	duplicateActiveTab,
 	exportHtml,
 	exportPdf,
 	handleDeepLink,
 	handleOpenFile,
 	handleOpenFolder,
-	openHelpFile,
-	saveActiveTab,
-	saveActiveTabAs,
-} from "./documentIO";
-import { getActiveEditorPort } from "./editorPort";
-import {
-	duplicateActiveTab,
 	newUntitledTab,
 	openFileByPath,
 	openFileFromUrl,
-} from "./fileops";
+	openHelpFile,
+	saveActiveTab,
+	saveActiveTabAs,
+	syncFromDisk,
+} from "./document";
+import { getActiveEditorPort } from "./editorPort";
 import {
 	activeNativeEditable,
 	claimClipboardOp,
@@ -30,7 +29,6 @@ import {
 	snapshotEditable,
 	syncControlledInput,
 } from "./nativeInput";
-import { syncFromDisk } from "./persist";
 import { useStore } from "./store";
 import { applyTextTransform } from "./textTransforms";
 import type { TextTransform } from "./types";
@@ -58,9 +56,9 @@ export function registerAppCommands(): void {
 	registerCommand("open-file", () => void handleOpenFile());
 	registerCommand("open-folder", () => void handleOpenFolder());
 	registerCommand("open-recent", (path) => void openFileByPath(String(path)));
-	registerCommand("open-path", () => useStore.getState().setOpenPathOpen(true));
+	registerCommand("open-path", () => useStore.getState().setDialog("openPath", true));
 	registerCommand("open-from-url", () =>
-		useStore.getState().setOpenUrlOpen(true),
+		useStore.getState().setDialog("openUrl", true),
 	);
 	registerCommand("open-url", (url) => void openFileFromUrl(String(url)));
 	registerCommand("save", () => void saveActiveTab());
@@ -73,7 +71,7 @@ export function registerAppCommands(): void {
 		if (id != null) useStore.getState().closeTab(id);
 	});
 	registerCommand("find-in-folder", () =>
-		useStore.getState().setFindInFolderOpen(true),
+		useStore.getState().setDialog("findInFolder", true),
 	);
 
 	// ---- editor ----
@@ -189,8 +187,8 @@ export function registerAppCommands(): void {
 	});
 
 	// ---- app shell ----
-	registerCommand("about", () => useStore.getState().setAboutOpen(true));
-	registerCommand("settings", () => useStore.getState().setSettingsOpen(true));
+	registerCommand("about", () => useStore.getState().setDialog("about", true));
+	registerCommand("settings", () => useStore.getState().setDialog("settings", true));
 	registerCommand("help", () => void openHelpFile());
 	registerCommand(
 		"open-external",

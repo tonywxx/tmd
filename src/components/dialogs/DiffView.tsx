@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "../../lib/store";
 import { getFileSystem } from "../../lib/fs";
 import { buildMergedContent } from "../../lib/diff";
-import { applyExternalContent } from "../../lib/persist";
+import { applyExternalContent } from "../../lib/document";
 import { basename } from "../../lib/pathutil";
 import type { DiffChoice, DiffData } from "../../lib/types";
 

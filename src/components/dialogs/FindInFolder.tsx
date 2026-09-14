@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useStore } from "../../lib/store";
 import { getFileSystem } from "../../lib/fs";
-import { openFileByPath } from "../../lib/fileops";
+import { openFileByPath } from "../../lib/document";
 import { executeCommand } from "../../lib/commands";
 import { basename } from "../../lib/pathutil";
 import type { SearchResult } from "../../lib/types";
 
 export default function FindInFolder() {
-  const setOpen = useStore((s) => s.setFindInFolderOpen);
+  const setDialog = useStore((s) => s.setDialog);
   const folderPath = useStore((s) => s.folderPath);
   const pushToast = useStore((s) => s.pushToast);
   const [query, setQuery] = useState("");
@@ -35,11 +35,11 @@ export default function FindInFolder() {
   async function openAt(file: string, line: number) {
     await openFileByPath(file);
     void executeCommand("goto-line", line);
-    setOpen(false);
+    setDialog("findInFolder", false);
   }
 
   return (
-    <div className="modal-backdrop" onClick={() => setOpen(false)}>
+    <div className="modal-backdrop" onClick={() => setDialog("findInFolder", false)}>
       <div className="modal find-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">Find in Folder</div>
         <div className="modal-body">
@@ -89,7 +89,7 @@ export default function FindInFolder() {
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn" onClick={() => setOpen(false)}>
+          <button className="btn" onClick={() => setDialog("findInFolder", false)}>
             Close
           </button>
         </div>

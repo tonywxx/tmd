@@ -15,7 +15,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useStore } from "../lib/store";
 import { confirmDialog, messageDialog } from "../lib/bridge";
 import { getFileSystem } from "../lib/fs";
-import { openFileByPath, openFileFromBrowser } from "../lib/fileops";
+import { openFileByPath, openFileFromBrowser } from "../lib/document";
 import { isOpenable } from "../lib/constants";
 import { basename, dirname, join } from "../lib/pathutil";
 import { type Favorite, type FileEntry, type SortMode } from "../lib/types";

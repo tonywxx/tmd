@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useStore } from "../../lib/store";
 import { getFileSystem } from "../../lib/fs";
-import { openFileByPath } from "../../lib/fileops";
+import { openFileByPath } from "../../lib/document";
 import { executeCommand } from "../../lib/commands";
 import { claimClipboardOp } from "../../lib/editorPort";
 import { snapshotEditable, insertIntoEditable } from "../../lib/nativeInput";
 
 export default function OpenPathModal() {
-  const setOpen = useStore((s) => s.setOpenPathOpen);
+  const setDialog = useStore((s) => s.setDialog);
   const pushToast = useStore((s) => s.pushToast);
   const [path, setPath] = useState("");
   const [line, setLine] = useState<number | null>(null);
@@ -41,11 +41,11 @@ export default function OpenPathModal() {
     if (id != null && line != null) {
       void executeCommand("goto-line", line);
     }
-    setOpen(false);
+    setDialog("openPath", false);
   }
 
   return (
-    <div className="modal-backdrop" onClick={() => setOpen(false)}>
+    <div className="modal-backdrop" onClick={() => setDialog("openPath", false)}>
       <div className="modal openpath-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">Open from Path</div>
         <div className="modal-body">
@@ -73,7 +73,7 @@ export default function OpenPathModal() {
           />
         </div>
         <div className="modal-footer">
-          <button className="btn" onClick={() => setOpen(false)}>
+          <button className="btn" onClick={() => setDialog("openPath", false)}>
             Cancel
           </button>
           <button className="btn primary" onClick={open}>

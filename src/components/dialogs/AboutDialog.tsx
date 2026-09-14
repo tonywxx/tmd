@@ -12,7 +12,7 @@ type CheckState =
   | "error";
 
 export default function AboutDialog() {
-  const setAboutOpen = useStore((s) => s.setAboutOpen);
+  const setDialog = useStore((s) => s.setDialog);
   const [version, setVersion] = useState("…");
   const [state, setState] = useState<CheckState>("idle");
   const [info, setInfo] = useState<{ version: string; notes?: string } | null>(
@@ -61,7 +61,7 @@ export default function AboutDialog() {
       : null;
 
   return (
-    <div className="modal-backdrop" onClick={() => setAboutOpen(false)}>
+    <div className="modal-backdrop" onClick={() => setDialog("about", false)}>
       <div className="modal about-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">About tmd</div>
         <div className="modal-body about-body">
@@ -119,7 +119,7 @@ export default function AboutDialog() {
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn primary" onClick={() => setAboutOpen(false)}>
+          <button className="btn primary" onClick={() => setDialog("about", false)}>
             Close
           </button>
         </div>

@@ -1,7 +1,7 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { isOpenable } from "./constants";
-import { openFileByPath } from "./fileops";
+import { openFileByPath } from "./document";
 
 type Pane = "editor" | "preview";
 
